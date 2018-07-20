@@ -24,6 +24,8 @@
 
 #include "vr/gvr/capi/include/gvr_version.h"
 
+#include "wombat_android_test/wombat_android_test.h"
+
 #define LOG_TAG "TreasureHuntCPP"
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
@@ -202,7 +204,7 @@ static void CheckGLError(const char* label) {
   if (gl_error != GL_NO_ERROR) {
     LOGW("GL error @ %s: %d", label, gl_error);
     // Crash immediately to make OpenGL errors obvious.
-    abort();
+    //abort();
   }
 }
 
@@ -262,6 +264,7 @@ static float VectorInnerProduct(const std::array<float, 4>& vect1,
   }
   return product;
 }
+
 }  // anonymous namespace
 
 TreasureHuntRenderer::TreasureHuntRenderer(
@@ -282,7 +285,8 @@ TreasureHuntRenderer::TreasureHuntRenderer(
       audio_source_id_(-1),
       success_source_id_(-1),
       gvr_controller_api_(nullptr),
-      gvr_viewer_type_(gvr_api_->GetViewerType()) {
+      gvr_viewer_type_(gvr_api_->GetViewerType()),
+      face_(wombat_android_test::create({}), wombat_android_test::destroy) {
   ResumeControllerApiAsNeeded();
 
   LOGD("Built with GVR version: %s", GVR_SDK_VERSION_STRING);
@@ -419,6 +423,8 @@ void TreasureHuntRenderer::InitializeGl() {
     audio_initialization_thread_ =
         std::thread(&TreasureHuntRenderer::LoadAndPlayCubeSound, this);
   }
+
+  face_->init({});
 }
 
 void TreasureHuntRenderer::ResumeControllerApiAsNeeded() {
@@ -547,15 +553,18 @@ void TreasureHuntRenderer::DrawFrame() {
         Vec4ToVec3(MatrixVectorMul(eye_views[eye], light_pos_world_space_));
   }
 
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  glDisable(GL_SCISSOR_TEST);
-  glDisable(GL_BLEND);
+  face_->update({});
+
+//  glEnable(GL_DEPTH_TEST);
+//  glEnable(GL_CULL_FACE);
+//  glDisable(GL_SCISSOR_TEST);
+//  glDisable(GL_BLEND);
 
   // Draw the world.
   frame.BindBuffer(0);
-  glClearColor(0.1f, 0.1f, 0.1f, 0.5f);  // Dark background so text shows up.
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  fbo_id_ = frame.GetFramebufferObject(0);
+//  glClearColor(0.1f, 0.1f, 0.1f, 0.5f);  // Dark background so text shows up.
+//  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (multiview_enabled_) {
     DrawWorld(kMultiview);
   } else {
@@ -565,11 +574,11 @@ void TreasureHuntRenderer::DrawFrame() {
   frame.Unbind();
 
   // Draw the reticle on a separate layer.
-  frame.BindBuffer(1);
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);  // Transparent background.
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  DrawReticle();
-  frame.Unbind();
+  //frame.BindBuffer(1);
+  //glClearColor(0.0f, 0.0f, 0.0f, 0.0f);  // Transparent background.
+  //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  //DrawReticle();
+  //frame.Unbind();
 
   // Submit frame.
   frame.Submit(*viewport_list_, head_view_);
@@ -652,19 +661,26 @@ int TreasureHuntRenderer::LoadGLShader(int type, const char** shadercode) {
  * @param view The view to render: left, right, or both (multiview).
  */
 void TreasureHuntRenderer::DrawWorld(ViewType view) {
+  wombat_android_test::render_args_t render_args;
+  render_args.fbo_id = fbo_id_;
+
   if (view == kMultiview) {
-    glViewport(0, 0, render_size_.width / 2, render_size_.height);
+    render_args.vp_rect = {0, 0, render_size_.width / 2, render_size_.height};
   } else {
     const gvr::BufferViewport& viewport =
         view == kLeftView ? viewport_left_ : viewport_right_;
     const gvr::Recti pixel_rect =
         CalculatePixelSpaceRect(render_size_, viewport.GetSourceUv());
-    glViewport(pixel_rect.left, pixel_rect.bottom,
+    render_args.vp_rect = {pixel_rect.left, pixel_rect.bottom,
                pixel_rect.right - pixel_rect.left,
-               pixel_rect.top - pixel_rect.bottom);
+               pixel_rect.top - pixel_rect.bottom};
   }
-  DrawCube(view);
-  DrawFloor(view);
+  glViewport(render_args.vp_rect.x, render_args.vp_rect.y, render_args.vp_rect.width, render_args.vp_rect.height);
+//
+//  DrawCube(view);
+//  DrawFloor(view);
+
+  face_->render(render_args);
 }
 
 void TreasureHuntRenderer::DrawCube(ViewType view) {

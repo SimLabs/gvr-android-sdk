@@ -10,8 +10,11 @@ android {
         versionName "1.0"
         externalNativeBuild {
             cmake {
-                cppFlags "-std=gnu++11"
-                arguments "-DGVR_LIBPATH=${project.rootDir}/libraries/jni",
+                cppFlags "-std=c++17",
+                         "-D_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE",
+                         "-D__forceinline=inline"
+                arguments "-DANDROID_STL=c++_static",
+                          "-DGVR_LIBPATH=${project.rootDir}/libraries/jni",
                           "-DGVR_INCLUDE=${project.rootDir}/libraries/headers"
             }
         }
@@ -29,8 +32,8 @@ android {
             // "packagingOptions {exclude('lib/armeabi-v7a/*')}" in the android
             // section.
             abiFilters "arm64-v8a"
-            abiFilters "armeabi-v7a"
-            abiFilters "x86"
+//            abiFilters "armeabi-v7a"
+//            abiFilters "x86"
         }
     }
     externalNativeBuild {
@@ -42,6 +45,7 @@ android {
 
 
 dependencies {
+    compile 'com.android.support:support-compat:26.1.0'
     compile 'com.google.vr:sdk-audio:1.150.0'
     compile 'com.google.vr:sdk-base:1.150.0'
 }

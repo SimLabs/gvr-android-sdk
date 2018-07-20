@@ -31,6 +31,8 @@
 #include "vr/gvr/capi/include/gvr_types.h"
 #include "world_layout_data.h"  // NOLINT
 
+#include "wombat_android_test/wombat_android_test_fwd.h"
+
 class TreasureHuntRenderer {
  public:
   /**
@@ -262,6 +264,9 @@ class TreasureHuntRenderer {
   gvr::ControllerState gvr_controller_state_;
 
   gvr::ViewerType gvr_viewer_type_;
+
+  std::shared_ptr<wombat_android_test::iface> face_;
+  int32_t fbo_id_ = -1;
 };
 
 #endif  // TREASUREHUNT_APP_SRC_MAIN_JNI_TREASUREHUNTRENDERER_H_  // NOLINT
