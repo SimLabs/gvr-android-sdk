@@ -31,7 +31,7 @@ set_target_properties(
 # Include general Android libraries.
 find_library(android-lib android)
 find_library(EGL-lib EGL)
-find_library(GLESv3-lib GLESv32)
+find_library(GLESv3-lib GLESv3)
 message("GLES LIB " ${GLESv3-lib})
 find_library(log-lib log)
 
