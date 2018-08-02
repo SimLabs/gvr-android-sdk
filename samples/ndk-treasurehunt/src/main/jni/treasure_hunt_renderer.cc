@@ -669,6 +669,12 @@ void TreasureHuntRenderer::DrawWorld(ViewType view) {
   } else {
     const gvr::BufferViewport& viewport =
         view == kLeftView ? viewport_left_ : viewport_right_;
+
+    const auto fov = viewport.GetSourceFov();
+    render_args.fov_rect = {fov.left, fov.right, fov.top, fov.bottom};
+
+    render_args.view_matrix = (float *) viewport.GetTransform().m;
+
     const gvr::Recti pixel_rect =
         CalculatePixelSpaceRect(render_size_, viewport.GetSourceUv());
     render_args.vp_rect = {pixel_rect.left, pixel_rect.bottom,
