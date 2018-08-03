@@ -35,7 +35,7 @@ find_library(GLESv3-lib GLESv3)
 message("GLES LIB " ${GLESv3-lib})
 find_library(log-lib log)
 
-set(SIMLABS_REPO_ROOT C:/Users/dan/CLionProjects/simlabs-repo)
+set(SIMLABS_REPO_ROOT C:/work/simlabs-repo-vr)
 
 set(LOGGER_EXTERNAL_DEPENDENCIES ${log-lib})
 set(WOMBAT_EXTERNAL_DEPENDENCIES ${GLESv3-lib} ${EGL-lib})

@@ -267,6 +267,7 @@ class TreasureHuntRenderer {
 
   std::shared_ptr<wombat_android_test::iface> face_;
   int32_t fbo_id_ = -1;
+  gvr::Mat4f eye_views[2];
 };
 
 #endif  // TREASUREHUNT_APP_SRC_MAIN_JNI_TREASUREHUNTRENDERER_H_  // NOLINT

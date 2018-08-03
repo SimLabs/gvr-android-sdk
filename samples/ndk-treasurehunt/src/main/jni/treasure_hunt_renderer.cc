@@ -520,7 +520,6 @@ void TreasureHuntRenderer::DrawFrame() {
                    {0.0f, 0.0f, 1.0f, 0.0f},
                    {0.0f, 0.0f, 0.0f, 1.0f}}};
 
-  gvr::Mat4f eye_views[2];
   for (int eye = 0; eye < 2; ++eye) {
     const gvr::Eye gvr_eye = eye == 0 ? GVR_LEFT_EYE : GVR_RIGHT_EYE;
     const gvr::Mat4f eye_from_head = gvr_api_->GetEyeFromHeadMatrix(gvr_eye);
@@ -673,7 +672,9 @@ void TreasureHuntRenderer::DrawWorld(ViewType view) {
     const auto fov = viewport.GetSourceFov();
     render_args.fov_rect = {fov.left, fov.right, fov.top, fov.bottom};
 
-    render_args.view_matrix = (float *) viewport.GetTransform().m;
+    size_t eye_index = view == kLeftView ? 0 : 1;
+
+    render_args.view_matrix = (float *) (eye_views[eye_index].m);
 
     const gvr::Recti pixel_rect =
         CalculatePixelSpaceRect(render_size_, viewport.GetSourceUv());
