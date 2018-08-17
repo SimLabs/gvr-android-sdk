@@ -629,6 +629,18 @@ void TreasureHuntRenderer::OnResume() {
   ResumeControllerApiAsNeeded();
 }
 
+int TreasureHuntRenderer::GetStreamingTextureID() {
+  return face_->get_streaming_texture_id();
+}
+
+int TreasureHuntRenderer::GetStreamingTextureWidth() {
+  return face_->get_streaming_texture_width();
+}
+
+int TreasureHuntRenderer::GetStreamingTextureHeight() {
+  return face_->get_streaming_texture_height();
+}
+
 /**
  * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
  *

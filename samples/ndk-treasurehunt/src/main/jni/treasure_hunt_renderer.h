@@ -75,6 +75,22 @@ class TreasureHuntRenderer {
    */
   void OnResume();
 
+  /**
+   * Get GL texture ID used to store streaming frames
+   */
+  int GetStreamingTextureID();
+
+  /**
+   * Get streaming texture width
+   */
+  int GetStreamingTextureWidth();
+
+
+  /**
+   * Get streaming texture height
+   */
+  int GetStreamingTextureHeight();
+
  private:
   int CreateTexture(int width, int height, int textureFormat, int textureType);
 

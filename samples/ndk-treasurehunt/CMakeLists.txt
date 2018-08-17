@@ -32,7 +32,7 @@ set_target_properties(
 find_library(android-lib android)
 find_library(EGL-lib EGL)
 find_library(GLESv3-lib GLESv3)
-message("GLES LIB " ${GLESv3-lib})
+message("GLES LIB: " ${GLESv3-lib})
 find_library(log-lib log)
 
 set(SIMLABS_REPO_ROOT C:/work/simlabs-repo-vr)

@@ -2,17 +2,24 @@
 
 buildscript {
     // This configures the Gradle build system, but not the GVR components.
+    ext.kotlin_version = '1.2.60'
     repositories {
         google()
+        mavenCentral()
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.3'
+        classpath 'com.android.tools.build:gradle:3.1.4'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-android-extensions:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
 }
+
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-android-extensions'
 
 allprojects {
     repositories {
@@ -26,10 +33,6 @@ allprojects {
         // You can also use a local Maven repository if desired.
         mavenLocal()
     }
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
 }
 
 // The dependencies for NDK builds live inside the .aar files so they need to
