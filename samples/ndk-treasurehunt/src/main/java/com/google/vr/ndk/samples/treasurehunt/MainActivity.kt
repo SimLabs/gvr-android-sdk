@@ -68,18 +68,16 @@ class MainActivity : Activity() {
 
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
 
-    private var cameraControl: CameraControl? = null
-    private val streamCommander = StreamCommander {
-        StreamDecoder(
-                true,
-                Surface(SurfaceTexture(nativeGetStreamingTextureID(nativeTreasureHuntRenderer))),
-                nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer),
-                nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
-        )
-    }
+    private lateinit var cameraControl: CameraControl
+
+    private lateinit var surfaceTexture: SurfaceTexture
+
+    private lateinit var streamCommander: StreamCommander
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        cameraControl = CameraControl(this)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
@@ -115,11 +113,28 @@ class MainActivity : Activity() {
                 object : GLSurfaceView.Renderer {
                     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
                         nativeInitializeGl(nativeTreasureHuntRenderer)
+
+                        surfaceTexture = SurfaceTexture(nativeGetStreamingTextureID(nativeTreasureHuntRenderer))
+
+                        streamCommander = StreamCommander {
+                            StreamDecoder(
+                                    true,
+                                    Surface(surfaceTexture),
+                                    nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer),
+                                    nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
+                            )
+                        }
+
+                        // Setup streaming
+                        streamCommander.onNewFrame = { msg -> System.out.println("Got new message: \"$msg\"") }
+                        streamCommander.connect("$STREAMING_ADDRESS:9002") { _ -> }
+                        cameraControl.connect("$STREAMING_ADDRESS:9003") { _ -> }
                     }
 
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
+                        surfaceTexture.updateTexImage()
                         nativeDrawFrame(nativeTreasureHuntRenderer)
                     }
                 })
@@ -150,12 +165,6 @@ class MainActivity : Activity() {
 
         // Enable VR Mode.
         AndroidCompat.setVrModeEnabled(this, true)
-
-        // Setup streaming
-        cameraControl = CameraControl(this)
-
-        streamCommander.connect("$STREAMING_ADDRESS:9002") { _ -> }
-        cameraControl?.connect("$STREAMING_ADDRESS:9003") { _ -> }
     }
 
     override fun onPause() {
@@ -230,6 +239,6 @@ class MainActivity : Activity() {
             System.loadLibrary("treasurehunt_jni")
         }
 
-        private const val STREAMING_ADDRESS = "192.168.0.2"
+        private const val STREAMING_ADDRESS = "ws://192.168.1.112"
     }
 }

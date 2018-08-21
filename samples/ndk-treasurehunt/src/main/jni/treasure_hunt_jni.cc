@@ -84,17 +84,17 @@ JNI_METHOD(void, nativeOnResume)
 // Streaming
 JNI_METHOD(jint, nativeGetStreamingTextureID)
 (JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
-  native(native_treasure_hunt)->GetStreamingTextureID();
+  return native(native_treasure_hunt)->GetStreamingTextureID();
 }
 
 JNI_METHOD(jint, nativeGetStreamingTextureWidth)
 (JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
-  native(native_treasure_hunt)->GetStreamingTextureWidth();
+  return native(native_treasure_hunt)->GetStreamingTextureWidth();
 }
 
 JNI_METHOD(jint, nativeGetStreamingTextureHeight)
 (JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
-  native(native_treasure_hunt)->GetStreamingTextureHeight();
+  return native(native_treasure_hunt)->GetStreamingTextureHeight();
 }
 
 }  // extern "C"

@@ -419,10 +419,10 @@ void TreasureHuntRenderer::InitializeGl() {
 
   // Initialize audio engine and preload sample in a separate thread to avoid
   // any delay during construction and app initialization. Only do this once.
-  if (!audio_initialization_thread_.joinable()) {
-    audio_initialization_thread_ =
-        std::thread(&TreasureHuntRenderer::LoadAndPlayCubeSound, this);
-  }
+//  if (!audio_initialization_thread_.joinable()) {
+//    audio_initialization_thread_ =
+//        std::thread(&TreasureHuntRenderer::LoadAndPlayCubeSound, this);
+//  }
 
   face_->init({});
 }
