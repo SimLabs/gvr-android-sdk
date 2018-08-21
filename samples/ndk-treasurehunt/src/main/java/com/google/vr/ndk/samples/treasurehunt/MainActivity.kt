@@ -20,21 +20,19 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.os.Vibrator
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.Surface
 import android.view.View
 import com.google.vr.ndk.base.AndroidCompat
 import com.google.vr.ndk.base.GvrLayout
 import ru.simlabs.stream.StreamCommander
-import ru.simlabs.stream.StreamDecoder
-import ru.simlabs.stream.utils.CameraControl
+import ru.simlabs.stream.unreal.AndroidMediaTextureUpdater
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -60,7 +58,7 @@ class MainActivity : Activity() {
     private var nativeTreasureHuntRenderer: Long = 0
 
     private var gvrLayout: GvrLayout? = null
-    private var surfaceView: GLSurfaceView? = null
+    private lateinit var surfaceView: GLSurfaceView
 
     // Note that pause and resume signals to the native renderer are performed on the GL thread,
     // ensuring thread-safety.
@@ -68,16 +66,12 @@ class MainActivity : Activity() {
 
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
 
-    private lateinit var cameraControl: CameraControl
+    private lateinit var streamingTextureUpdater: AndroidMediaTextureUpdater
 
-    private lateinit var surfaceTexture: SurfaceTexture
-
-    private lateinit var streamCommander: StreamCommander
+    private val streamCommander = StreamCommander { streamingTextureUpdater.invoke() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        cameraControl = CameraControl(this)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
@@ -106,46 +100,46 @@ class MainActivity : Activity() {
 
         // Add the GLSurfaceView to the GvrLayout.
         surfaceView = GLSurfaceView(this)
-        surfaceView!!.setEGLContextClientVersion(3)
-        surfaceView!!.setEGLConfigChooser(8, 8, 8, 0, 0, 0)
-        surfaceView!!.preserveEGLContextOnPause = true
-        surfaceView!!.setRenderer(
+        surfaceView.setEGLContextClientVersion(3)
+        surfaceView.setEGLConfigChooser(8, 8, 8, 0, 0, 0)
+        surfaceView.preserveEGLContextOnPause = true
+        surfaceView.setRenderer(
                 object : GLSurfaceView.Renderer {
                     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
                         nativeInitializeGl(nativeTreasureHuntRenderer)
 
-                        surfaceTexture = SurfaceTexture(nativeGetStreamingTextureID(nativeTreasureHuntRenderer))
+                        streamingTextureUpdater = AndroidMediaTextureUpdater(
+                                nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer),
+                                nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
+                        )
 
-                        streamCommander = StreamCommander {
-                            StreamDecoder(
-                                    true,
-                                    Surface(surfaceTexture),
-                                    nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer),
-                                    nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
-                            )
-                        }
+                        val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer)
+                        Log.i("Streaming", "got texture with id $textureID")
+                        streamingTextureUpdater.setTextureID(textureID)
 
                         // Setup streaming
-                        streamCommander.onNewFrame = { msg -> System.out.println("Got new message: \"$msg\"") }
-                        streamCommander.connect("$STREAMING_ADDRESS:9002") { _ -> }
-                        cameraControl.connect("$STREAMING_ADDRESS:9003") { _ -> }
+                        streamCommander.connect("$STREAMING_ADDRESS:9002") { success ->
+                            if (success) {
+                                Log.i("Streaming", "connected to $STREAMING_ADDRESS:9002")
+                            }
+                        }
                     }
 
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
-                        surfaceTexture.updateTexImage()
+                        streamingTextureUpdater.updateTexture()
                         nativeDrawFrame(nativeTreasureHuntRenderer)
                     }
                 })
 
-        surfaceView!!.setOnTouchListener(
-                View.OnTouchListener { v, event ->
+        surfaceView.setOnTouchListener(
+                View.OnTouchListener { _, event ->
                     if (event.action == MotionEvent.ACTION_DOWN) {
                         // Give user feedback and signal a trigger event.
                         (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
                                 .vibrate(50)
-                        surfaceView!!.queueEvent { nativeOnTriggerEvent(nativeTreasureHuntRenderer) }
+                        surfaceView.queueEvent { nativeOnTriggerEvent(nativeTreasureHuntRenderer) }
                         return@OnTouchListener true
                     }
                     false
@@ -168,8 +162,8 @@ class MainActivity : Activity() {
     }
 
     override fun onPause() {
-        surfaceView!!.queueEvent(pauseNativeRunnable)
-        surfaceView!!.onPause()
+        surfaceView.queueEvent(pauseNativeRunnable)
+        surfaceView.onPause()
         gvrLayout!!.onPause()
         super.onPause()
     }
@@ -177,8 +171,8 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         gvrLayout!!.onResume()
-        surfaceView!!.onResume()
-        surfaceView!!.queueEvent(resumeNativeRunnable)
+        surfaceView.onResume()
+        surfaceView.queueEvent(resumeNativeRunnable)
     }
 
     override fun onDestroy() {
