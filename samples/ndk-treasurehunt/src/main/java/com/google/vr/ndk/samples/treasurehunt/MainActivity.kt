@@ -128,7 +128,8 @@ class MainActivity : Activity() {
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
-                        streamingTextureUpdater.updateTexture()
+                        // TODO: re-enable after cubemap is ready
+//                        streamingTextureUpdater.updateTexture()
                         nativeDrawFrame(nativeTreasureHuntRenderer)
                     }
                 })

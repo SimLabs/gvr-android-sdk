@@ -20,7 +20,7 @@ class BitmapRenderer(private val mVulkanRenderer: Boolean) : android.graphics.Su
     private val mTransformMatrix = FloatArray(16)
     private var mTriangleVerticesDirty = true
     private var mTextureSizeChanged = true
-    private var mUseOwnContext: Boolean = false
+    private var mUseOwnContext: Boolean = true
     private var mSwizzlePixels = false
 
     private val GL_TEXTURE_EXTERNAL_OES = 0x8D65
