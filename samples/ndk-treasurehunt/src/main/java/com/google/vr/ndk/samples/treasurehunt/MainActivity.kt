@@ -118,18 +118,17 @@ class MainActivity : Activity() {
                         streamingTextureUpdater.setTextureID(textureID)
 
                         // Setup streaming
-//                        streamCommander.connect("$STREAMING_ADDRESS:9002") { success ->
-//                            if (success) {
-//                                Log.i("Streaming", "connected to $STREAMING_ADDRESS:9002")
-//                            }
-//                        }
+                        streamCommander.connect("$STREAMING_ADDRESS:9002") { success ->
+                            if (success) {
+                                Log.i("Streaming", "connected to $STREAMING_ADDRESS:9002")
+                            }
+                        }
                     }
 
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
-                        // TODO: re-enable after cubemap is ready
-//                        streamingTextureUpdater.updateTexture()
+                        streamingTextureUpdater.updateTexture()
                         nativeDrawFrame(nativeTreasureHuntRenderer)
                     }
                 })
