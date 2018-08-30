@@ -12,7 +12,12 @@ import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 
 
-class StreamDecoder(val verbose: Boolean, private var surface: Surface?, private var widthVal: Int, private var heightVal: Int) : Thread() {
+class StreamDecoder(
+        private val verbose: Boolean,
+        private var surface: Surface?,
+        private var widthVal: Int,
+        private var heightVal: Int
+) : Thread() {
 
     private var decoder: MediaCodec? = null
 
@@ -36,7 +41,7 @@ class StreamDecoder(val verbose: Boolean, private var surface: Surface?, private
 
     fun encodeNextFrame(byteBuffer: ByteBufferList) {
         val bytes = byteBuffer.allByteArray
-        if (!verbose) Log.d(NAME, "Accepted: ${bytes.size}")
+        if (verbose) Log.d(NAME, "Accepted: ${bytes.size}")
 
         if (!isConfigured && isKeyFrame(bytes)) return configureDecoder(bytes)
         feedDecoder(bytes)
@@ -68,7 +73,7 @@ class StreamDecoder(val verbose: Boolean, private var surface: Surface?, private
         buffer?.put(bytes)
 
         decoder?.queueInputBuffer(index, 0, size, time, 0)
-        if (!verbose) Log.d(NAME, "Queueing buffer: $index, Size: $size")
+        if (verbose) Log.d(NAME, "Queueing buffer: $index, Size: $size")
     }
 
     private fun configureDecoder(keyFrame: ByteArray) {
@@ -127,7 +132,7 @@ class StreamDecoder(val verbose: Boolean, private var surface: Surface?, private
 
         val index = decoder?.dequeueOutputBuffer(info, maxTimeout)
         if (index != null && index >= 0) {
-            if (!verbose) Log.d(NAME, "Rendering: $index")
+            if (verbose) Log.d(NAME, "Rendering: $index")
             decoder?.releaseOutputBuffer(index, true)
         }
     }

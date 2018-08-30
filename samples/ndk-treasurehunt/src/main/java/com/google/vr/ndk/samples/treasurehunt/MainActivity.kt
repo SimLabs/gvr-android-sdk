@@ -20,6 +20,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.os.Vibrator
@@ -28,11 +29,12 @@ import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.Surface
 import android.view.View
 import com.google.vr.ndk.base.AndroidCompat
 import com.google.vr.ndk.base.GvrLayout
 import ru.simlabs.stream.StreamCommander
-import ru.simlabs.stream.unreal.AndroidMediaTextureUpdater
+import ru.simlabs.stream.StreamDecoder
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -66,9 +68,10 @@ class MainActivity : Activity() {
 
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
 
-    private lateinit var streamingTextureUpdater: AndroidMediaTextureUpdater
+    private lateinit var streamingSurfaceTexture: SurfaceTexture
+    private lateinit var streamDecoderFactory: () -> StreamDecoder
 
-    private val streamCommander = StreamCommander { streamingTextureUpdater.invoke() }
+    private val streamCommander = StreamCommander { streamDecoderFactory() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,14 +111,21 @@ class MainActivity : Activity() {
                     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
                         nativeInitializeGl(nativeTreasureHuntRenderer)
 
-                        streamingTextureUpdater = AndroidMediaTextureUpdater(
-                                nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer),
-                                nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
-                        )
-
                         val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer)
                         Log.i("Streaming", "got texture with id $textureID")
-                        streamingTextureUpdater.setTextureID(textureID)
+
+                        val textureWidth = nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer)
+                        val textureHeight = nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
+
+                        streamingSurfaceTexture = SurfaceTexture(textureID)
+                        streamDecoderFactory = {
+                            StreamDecoder(
+                                    false,
+                                    Surface(streamingSurfaceTexture),
+                                    textureWidth,
+                                    textureHeight
+                            )
+                        }
 
                         // Setup streaming
                         streamCommander.connect("$STREAMING_ADDRESS:9002") { success ->
@@ -128,7 +138,7 @@ class MainActivity : Activity() {
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
-                        streamingTextureUpdater.updateTexture()
+                        streamingSurfaceTexture.updateTexImage()
                         nativeDrawFrame(nativeTreasureHuntRenderer)
                     }
                 })
@@ -137,6 +147,7 @@ class MainActivity : Activity() {
                 View.OnTouchListener { _, event ->
                     if (event.action == MotionEvent.ACTION_DOWN) {
                         // Give user feedback and signal a trigger event.
+                        @Suppress("DEPRECATION")
                         (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
                                 .vibrate(50)
                         surfaceView.queueEvent { nativeOnTriggerEvent(nativeTreasureHuntRenderer) }
