@@ -6,7 +6,7 @@ android {
     compileSdkVersion 26
     defaultConfig {
         applicationId "ru.simlabs.testapp"
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 24
         versionCode 1
         versionName "1.0"
@@ -14,7 +14,8 @@ android {
             cmake {
                 cppFlags "-std=c++17",
                          "-D_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE",
-                         "-D__forceinline=inline"
+                         "-D__forceinline=inline",
+                         "-g"
                 arguments "-DANDROID_STL=c++_static",
                           "-DGVR_LIBPATH=${project.rootDir}/libraries/jni",
                           "-DGVR_INCLUDE=${project.rootDir}/libraries/headers"

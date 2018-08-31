@@ -9,24 +9,14 @@ import ru.simlabs.stream.utils.Command
 import ru.simlabs.stream.utils.StreamPolicy
 import java.lang.Integer.parseInt
 
-fun Boolean.toInt() = if(this) 1 else 0
-
 class StreamCommander constructor(fact: () -> StreamDecoder) {
     private val decoderFactory: () -> StreamDecoder = fact
-    private var streamDecoder : StreamDecoder? = null
+    private lateinit var streamDecoder: StreamDecoder
     private var isStreamConnected = false
 
     private var webSocket: WebSocket? = null
 
     var onNewFrame: ((String) -> Unit)? = null
-
-//    private object Holder {
-//        val INSTANCE = StreamCommander()
-//    }
-//
-//    companion object {
-//        val instance: StreamCommander by lazy { Holder.INSTANCE }
-//    }
 
     fun connect(address: String, onConnectionResult: (Boolean) -> Unit) {
         if (isStreamConnected) return
@@ -42,6 +32,7 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
             this.webSocket = webSocket
             isStreamConnected = true
             streamDecoder = decoderFactory()
+            streamDecoder.start()
 
             webSocket.setStringCallback { msg ->
                 val list = msg.split(" ")
@@ -57,15 +48,13 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
                 if (byteBufferList.isEmpty)
                     return@setDataCallback
 
-                streamDecoder?.encodeNextFrame(byteBufferList)
+                streamDecoder.enqueueNextFrame(byteBufferList)
                 byteBufferList.recycle()
             }
 
-            streamDecoder?.start()
-
             webSocket.send("${Command.SET_CLIENT_TYPE.ordinal} ${ClientType.RawH264.ordinal}")
             webSocket.send("${Command.SET_CLIENT_LIMITATIONS.ordinal} 1280 720 45")
-            webSocket.send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder?.width} ${streamDecoder?.height}")
+            webSocket.send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
             activatePolicy(StreamPolicy.SMOOTH)
             onConnectionResult(true)
         }
@@ -84,10 +73,8 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
     fun changeSurface(surface: Surface?, width: Int, height: Int) {
         if (surface == null) return
 
-        if(streamDecoder != null){
-            streamDecoder?.resize(surface, width, height)
-            send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder?.width} ${streamDecoder?.height}")
-        }
+        streamDecoder?.resize(surface, width, height)
+        send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder?.width} ${streamDecoder?.height}")
 
     }
 
@@ -111,10 +98,13 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
     fun disconnect() {
         webSocket?.close()
         webSocket = null
-        streamDecoder?.close()
-        streamDecoder = null
+        streamDecoder.close()
         isStreamConnected = false
     }
 
     val connected: Boolean get() = isStreamConnected
+
+    companion object {
+        private fun Boolean.toInt() = if(this) 1 else 0
+    }
 }

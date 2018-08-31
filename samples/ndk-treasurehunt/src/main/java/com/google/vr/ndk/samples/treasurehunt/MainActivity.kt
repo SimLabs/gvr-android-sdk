@@ -69,9 +69,7 @@ class MainActivity : Activity() {
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
 
     private lateinit var streamingSurfaceTexture: SurfaceTexture
-    private lateinit var streamDecoderFactory: () -> StreamDecoder
-
-    private val streamCommander = StreamCommander { streamDecoderFactory() }
+    private lateinit var streamCommander: StreamCommander
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,7 +116,7 @@ class MainActivity : Activity() {
                         val textureHeight = nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
 
                         streamingSurfaceTexture = SurfaceTexture(textureID)
-                        streamDecoderFactory = {
+                        streamCommander = StreamCommander {
                             StreamDecoder(
                                     false,
                                     Surface(streamingSurfaceTexture),
@@ -191,9 +189,10 @@ class MainActivity : Activity() {
         // Destruction order is important; shutting down the GvrLayout will detach
         // the GLSurfaceView and stop the GL thread, allowing safe shutdown of
         // native resources from the UI thread.
-        gvrLayout!!.shutdown()
         nativeDestroyRenderer(nativeTreasureHuntRenderer)
         nativeTreasureHuntRenderer = 0
+        streamCommander.disconnect()
+        gvrLayout!!.shutdown()
     }
 
     override fun onBackPressed() {
