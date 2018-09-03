@@ -286,7 +286,8 @@ TreasureHuntRenderer::TreasureHuntRenderer(
       success_source_id_(-1),
       gvr_controller_api_(nullptr),
       gvr_viewer_type_(gvr_api_->GetViewerType()),
-      face_(wombat_android_test::create({}), wombat_android_test::destroy) {
+      face_(wombat_android_test::create({}), wombat_android_test::destroy),
+      last_update(gvr::GvrApi::GetTimePointNow()) {
   ResumeControllerApiAsNeeded();
 
   LOGD("Built with GVR version: %s", GVR_SDK_VERSION_STRING);
@@ -469,7 +470,7 @@ void TreasureHuntRenderer::ProcessControllerInput() {
   // Trigger click event if app/click button is clicked.
   if (gvr_controller_state_.GetButtonDown(GVR_CONTROLLER_BUTTON_APP) ||
       gvr_controller_state_.GetButtonDown(GVR_CONTROLLER_BUTTON_CLICK)) {
-    OnTriggerEvent();
+      OnFlyStateChanged(false);
   }
 }
 
@@ -552,7 +553,16 @@ void TreasureHuntRenderer::DrawFrame() {
         Vec4ToVec3(MatrixVectorMul(eye_views[eye], light_pos_world_space_));
   }
 
-  face_->update({});
+  gvr::ClockTimePoint time_now = gvr::GvrApi::GetTimePointNow();
+
+  wombat_android_test::update_args_t args;
+  args.head_matrix = (float *) head_view_.m;
+  args.time_delta = static_cast<float>(
+          (time_now.monotonic_system_time_nanos - last_update.monotonic_system_time_nanos) * 1e-9
+  );
+
+  face_->update(args);
+  last_update = time_now;
 
 //  glEnable(GL_DEPTH_TEST);
 //  glEnable(GL_CULL_FACE);
@@ -560,8 +570,8 @@ void TreasureHuntRenderer::DrawFrame() {
 //  glDisable(GL_BLEND);
 
   // Draw the world.
-  frame.BindBuffer(0);
-  fbo_id_ = frame.GetFramebufferObject(0);
+    frame.BindBuffer(0);
+    fbo_id_ = frame.GetFramebufferObject(0);
 //  glClearColor(0.1f, 0.1f, 0.1f, 0.5f);  // Dark background so text shows up.
 //  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (multiview_enabled_) {
@@ -607,12 +617,8 @@ void TreasureHuntRenderer::PrepareFramebuffer() {
   }
 }
 
-void TreasureHuntRenderer::OnTriggerEvent() {
-  if (IsPointingAtObject()) {
-    success_source_id_ = gvr_audio_api_->CreateStereoSound(kSuccessSoundFile);
-    gvr_audio_api_->PlaySound(success_source_id_, false /* looping disabled */);
-    HideObject();
-  }
+void TreasureHuntRenderer::OnFlyStateChanged(bool flying_forward) {
+  face_->set_flying_forward(flying_forward);
 }
 
 void TreasureHuntRenderer::OnPause() {
@@ -686,7 +692,9 @@ void TreasureHuntRenderer::DrawWorld(ViewType view) {
 
     size_t eye_index = view == kLeftView ? 0 : 1;
 
-    render_args.view_matrix = (float *) (eye_views[eye_index].m);
+    render_args.eye_matrix = (float *) (
+            gvr_api_->GetEyeFromHeadMatrix(eye_index == 0 ? GVR_LEFT_EYE : GVR_RIGHT_EYE).m
+    );
 
     const gvr::Recti pixel_rect =
         CalculatePixelSpaceRect(render_size_, viewport.GetSourceUv());
@@ -694,8 +702,7 @@ void TreasureHuntRenderer::DrawWorld(ViewType view) {
                pixel_rect.right - pixel_rect.left,
                pixel_rect.top - pixel_rect.bottom};
   }
-  glViewport(render_args.vp_rect.x, render_args.vp_rect.y, render_args.vp_rect.width, render_args.vp_rect.height);
-//
+
 //  DrawCube(view);
 //  DrawFloor(view);
 

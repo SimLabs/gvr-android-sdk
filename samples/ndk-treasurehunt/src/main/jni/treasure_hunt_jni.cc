@@ -66,9 +66,9 @@ JNI_METHOD(void, nativeDrawFrame)
   native(native_treasure_hunt)->DrawFrame();
 }
 
-JNI_METHOD(void, nativeOnTriggerEvent)
-(JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
-  native(native_treasure_hunt)->OnTriggerEvent();
+JNI_METHOD(void, nativeOnFlyStateChanged)
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt, jboolean flying_forward) {
+  native(native_treasure_hunt)->OnFlyStateChanged(flying_forward);
 }
 
 JNI_METHOD(void, nativeOnPause)

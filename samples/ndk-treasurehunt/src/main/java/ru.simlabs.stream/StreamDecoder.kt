@@ -104,7 +104,9 @@ class StreamDecoder(
             if (verbose) {
                 Log.d(NAME, "output buffer $index available with presentation time ${info.presentationTimeUs}")
             }
-            codec.releaseOutputBuffer(index, info.size > 0)
+            if (isConfigured) {
+                codec.releaseOutputBuffer(index, info.size > 0)
+            }
         }
 
         override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {

@@ -23,7 +23,6 @@ import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
-import android.os.Vibrator
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -140,15 +139,14 @@ class MainActivity : Activity() {
 
         surfaceView.setOnTouchListener(
                 View.OnTouchListener { _, event ->
-                    if (event.action == MotionEvent.ACTION_DOWN) {
-                        // Give user feedback and signal a trigger event.
-                        @Suppress("DEPRECATION")
-                        (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
-                                .vibrate(50)
-                        surfaceView.queueEvent { nativeOnTriggerEvent(nativeTreasureHuntRenderer) }
-                        return@OnTouchListener true
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN ->
+                            surfaceView.queueEvent { nativeOnFlyStateChanged(nativeTreasureHuntRenderer, true) }
+                        MotionEvent.ACTION_UP   ->
+                            surfaceView.queueEvent { nativeOnFlyStateChanged(nativeTreasureHuntRenderer, false) }
+                        else                    -> return@OnTouchListener false
                     }
-                    false
+                    return@OnTouchListener true
                 })
         gvrLayout!!.setPresentationView(surfaceView)
 
@@ -229,7 +227,7 @@ class MainActivity : Activity() {
     private external fun nativeDestroyRenderer(nativeTreasureHuntRenderer: Long)
     private external fun nativeInitializeGl(nativeTreasureHuntRenderer: Long)
     private external fun nativeDrawFrame(nativeTreasureHuntRenderer: Long): Long
-    private external fun nativeOnTriggerEvent(nativeTreasureHuntRenderer: Long)
+    private external fun nativeOnFlyStateChanged(nativeTreasureHuntRenderer: Long, flyForward: Boolean)
     private external fun nativeOnPause(nativeTreasureHuntRenderer: Long)
     private external fun nativeOnResume(nativeTreasureHuntRenderer: Long)
 

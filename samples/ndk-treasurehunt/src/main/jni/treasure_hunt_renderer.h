@@ -63,7 +63,7 @@ class TreasureHuntRenderer {
   /**
    * Hide the cube if it's being targeted.
    */
-  void OnTriggerEvent();
+  void OnFlyStateChanged(bool flying_forward);
 
   /**
    * Pause head tracking.
@@ -284,6 +284,7 @@ class TreasureHuntRenderer {
   std::shared_ptr<wombat_android_test::iface> face_;
   int32_t fbo_id_ = -1;
   gvr::Mat4f eye_views[2];
+  gvr::ClockTimePoint last_update;
 };
 
 #endif  // TREASUREHUNT_APP_SRC_MAIN_JNI_TREASUREHUNTRENDERER_H_  // NOLINT
