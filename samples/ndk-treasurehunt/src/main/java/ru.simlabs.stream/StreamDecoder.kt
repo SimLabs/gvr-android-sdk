@@ -15,7 +15,7 @@ class StreamDecoder(
         private var widthVal: Int,
         private var heightVal: Int
 ) {
-    private class Frame(val data: ByteArray, val timestamp: Long)
+    private val callback = RenderToSurfaceCallback()
 
     private val decoder: MediaCodec = try {
         MediaCodec.createDecoderByType(VIDEO_FORMAT)
@@ -25,7 +25,6 @@ class StreamDecoder(
     }
 
     private val availableBuffers = ConcurrentLinkedQueue<Int>()
-    private val frameQueue = ConcurrentLinkedQueue<Frame>()
 
     private var startTime: Long = 0
     private var isConfigured = false
@@ -44,7 +43,9 @@ class StreamDecoder(
     private fun putFrame(index: Int, frame: Frame) {
         decoder.getInputBuffer(index).put(frame.data)
         decoder.queueInputBuffer(index, 0, frame.data.size, frame.timestamp, 0)
-        Log.d(NAME, "filled input buffer $index with ${frame.data.size} bytes of data received at time ${frame.timestamp}")
+        if (verbose) {
+            Log.d(NAME, "filled input buffer $index with ${frame.data.size} bytes of data received at time ${frame.timestamp}")
+        }
     }
 
     fun enqueueNextFrame(byteBuffer: ByteBufferList) {
@@ -58,12 +59,10 @@ class StreamDecoder(
         }
 
         val frame = Frame(bytes, System.currentTimeMillis() - startTime)
-        val index = availableBuffers.poll()
+        val bufferIndex = availableBuffers.poll()
 
-        if (index != null) {
-            putFrame(index, frame)
-        } else {
-            frameQueue.add(frame)
+        if (bufferIndex != null) {
+            putFrame(bufferIndex, frame)
         }
     }
 
@@ -78,7 +77,7 @@ class StreamDecoder(
         format.setByteBuffer("csd-0", ByteBuffer.wrap(keyFrame))
 
         decoder.configure(format, surface, null, 0)
-        decoder.setCallback(RenderToSurfaceCallback())
+        decoder.setCallback(callback)
 
         decoder.start()
         startTime = System.currentTimeMillis()
@@ -89,7 +88,6 @@ class StreamDecoder(
     fun reset() {
         decoder.reset()
         availableBuffers.clear()
-        frameQueue.clear()
     }
 
     fun start() {
@@ -101,27 +99,25 @@ class StreamDecoder(
         isConfigured = false
     }
 
-    inner class RenderToSurfaceCallback: MediaCodec.Callback() {
+    private inner class RenderToSurfaceCallback: MediaCodec.Callback() {
         override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: MediaCodec.BufferInfo) {
-            Log.d(NAME, "output buffer $index available with presentation time ${info.presentationTimeUs}")
+            if (verbose) {
+                Log.d(NAME, "output buffer $index available with presentation time ${info.presentationTimeUs}")
+            }
             codec.releaseOutputBuffer(index, info.size > 0)
         }
 
         override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
-            Log.d(NAME, "input buffer $index available")
-
-            val timeNow = System.currentTimeMillis() - startTime
-            val frame = frameQueue.poll()
-
-            if (frame == null) {
-                availableBuffers.add(index)
-            } else if (frame.timestamp + MAX_TIMEOUT < timeNow) {
-                putFrame(index, frame)
+            if (verbose) {
+                Log.d(NAME, "input buffer $index available")
             }
+            availableBuffers.add(index)
         }
 
         override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
-            Log.w(NAME, "Output format changed to $format")
+            if (verbose) {
+                Log.w(NAME, "Output format changed to $format")
+            }
         }
 
         override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
@@ -129,8 +125,9 @@ class StreamDecoder(
         }
     }
 
+    private class Frame(val data: ByteArray, val timestamp: Long)
+
     companion object {
-        private const val MAX_TIMEOUT = 100L
         private const val NAME = "Video Decoder"
         private const val VIDEO_FORMAT = "video/avc"
 

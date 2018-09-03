@@ -3,11 +3,11 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 28
     defaultConfig {
         applicationId "ru.simlabs.testapp"
-        minSdkVersion 21
-        targetSdkVersion 24
+        minSdkVersion 24
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
         externalNativeBuild {
@@ -52,8 +52,6 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:appcompat-v7:26.1.0'
-    compile 'com.android.support:support-compat:26.1.0'
     compile 'com.google.vr:sdk-audio:1.150.0'
     compile 'com.google.vr:sdk-base:1.150.0'
     compile 'com.koushikdutta.async:androidasync:2.2.1'

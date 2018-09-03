@@ -24,8 +24,6 @@ import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.os.Vibrator
-import android.support.v4.app.ActivityCompat
-import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -74,9 +72,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                    this,
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
                     arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
                     179
             )

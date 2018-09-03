@@ -12,14 +12,15 @@ import java.lang.Integer.parseInt
 class StreamCommander constructor(fact: () -> StreamDecoder) {
     private val decoderFactory: () -> StreamDecoder = fact
     private lateinit var streamDecoder: StreamDecoder
-    private var isStreamConnected = false
+    private lateinit var webSocket: WebSocket
 
-    private var webSocket: WebSocket? = null
+    var connected = false
+        private set
 
     var onNewFrame: ((String) -> Unit)? = null
 
     fun connect(address: String, onConnectionResult: (Boolean) -> Unit) {
-        if (isStreamConnected) return
+        if (connected) return
 
         AsyncHttpClient.getDefaultInstance().websocket(address, null
         ) { exception, webSocket ->
@@ -30,7 +31,7 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
             }
 
             this.webSocket = webSocket
-            isStreamConnected = true
+            connected = true
             streamDecoder = decoderFactory()
             streamDecoder.start()
 
@@ -73,14 +74,14 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
     fun changeSurface(surface: Surface?, width: Int, height: Int) {
         if (surface == null) return
 
-        streamDecoder?.resize(surface, width, height)
-        send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder?.width} ${streamDecoder?.height}")
+        streamDecoder.resize(surface, width, height)
+        send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
 
     }
 
     private fun send(msg: String) {
-        if (!isStreamConnected) return
-        webSocket?.send(msg)
+        if (!connected) return
+        webSocket.send(msg)
     }
 
     fun activatePolicy(preset: StreamPolicy) {
@@ -96,13 +97,12 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
     }
 
     fun disconnect() {
-        webSocket?.close()
-        webSocket = null
-        streamDecoder.close()
-        isStreamConnected = false
+        if (connected) {
+            webSocket.close()
+            streamDecoder.close()
+            connected = false
+        }
     }
-
-    val connected: Boolean get() = isStreamConnected
 
     companion object {
         private fun Boolean.toInt() = if(this) 1 else 0
