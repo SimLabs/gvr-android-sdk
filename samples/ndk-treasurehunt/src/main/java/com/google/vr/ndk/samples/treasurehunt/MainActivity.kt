@@ -66,7 +66,7 @@ class MainActivity : Activity() {
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
 
     private lateinit var streamingSurfaceTexture: SurfaceTexture
-    private lateinit var streamCommander: StreamCommander
+    private var streamCommander: StreamCommander? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,17 +112,20 @@ class MainActivity : Activity() {
                         val textureHeight = nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
 
                         streamingSurfaceTexture = SurfaceTexture(textureID)
-                        streamCommander = StreamCommander {
-                            StreamDecoder(
-                                    false,
-                                    Surface(streamingSurfaceTexture),
-                                    textureWidth,
-                                    textureHeight
-                            )
+
+                        if (true) {
+                            streamCommander = StreamCommander {
+                                StreamDecoder(
+                                        false,
+                                        Surface(streamingSurfaceTexture),
+                                        textureWidth,
+                                        textureHeight
+                                )
+                            }
                         }
 
                         // Setup streaming
-                        streamCommander.connect("$STREAMING_ADDRESS:9002") { success ->
+                        streamCommander?.connect("$STREAMING_ADDRESS:9002") { success ->
                             if (success) {
                                 Log.i("Streaming", "connected to $STREAMING_ADDRESS:9002")
                             }
@@ -132,7 +135,8 @@ class MainActivity : Activity() {
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
-                        streamingSurfaceTexture.updateTexImage()
+                        if (streamCommander != null)
+                            streamingSurfaceTexture.updateTexImage()
                         nativeDrawFrame(nativeTreasureHuntRenderer)
                     }
                 })
@@ -186,7 +190,7 @@ class MainActivity : Activity() {
         // native resources from the UI thread.
         nativeDestroyRenderer(nativeTreasureHuntRenderer)
         nativeTreasureHuntRenderer = 0
-        streamCommander.disconnect()
+        streamCommander?.disconnect()
         gvrLayout!!.shutdown()
     }
 
