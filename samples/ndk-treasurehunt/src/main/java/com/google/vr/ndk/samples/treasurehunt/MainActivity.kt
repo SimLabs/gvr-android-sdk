@@ -17,12 +17,12 @@ package com.google.vr.ndk.samples.treasurehunt
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
+import android.support.v4.app.FragmentActivity
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -32,8 +32,10 @@ import com.google.vr.ndk.base.AndroidCompat
 import com.google.vr.ndk.base.GvrLayout
 import ru.simlabs.stream.StreamCommander
 import ru.simlabs.stream.StreamDecoder
+import ru.simlabs.stream.utils.StreamPreferencesConstants
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+
 
 /**
  * A Google VR NDK sample application.
@@ -50,9 +52,7 @@ import javax.microedition.khronos.opengles.GL10
  * rendering, a GvrLayout for GVR API access, and forwards relevant events to the native renderer
  * where rendering and interaction are handled.
  */
-@SuppressLint("ClickableViewAccessibility")
-class MainActivity : Activity() {
-
+class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     // Opaque native pointer to the native TreasureHuntRenderer instance.
     private var nativeTreasureHuntRenderer: Long = 0
 
@@ -65,18 +65,62 @@ class MainActivity : Activity() {
 
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
 
+    private var streamingEnabled = false
     private lateinit var streamingSurfaceTexture: SurfaceTexture
-    private var streamCommander: StreamCommander? = null
+    private val streamCommander = StreamCommander {
+        StreamDecoder(
+                false,
+                Surface(streamingSurfaceTexture),
+                nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer),
+                nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
+        )
+    }
 
+    override fun onDialogExited() {
+        val streamingPreferences = getSharedPreferences(
+                StreamPreferencesConstants.STREAMING_PREFERENCES_NAME,
+                Context.MODE_PRIVATE
+        )
+
+        if (streamingPreferences
+                        .getBoolean(StreamPreferencesConstants.STREAMING_ENABLED_KEY, false)
+        ) {
+            val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer)
+            Log.i("Streaming", "got texture with id $textureID")
+
+            streamingSurfaceTexture = SurfaceTexture(textureID)
+
+            // Setup streaming
+            val streamServerAddress = streamingPreferences.getString(
+                    StreamPreferencesConstants.STREAMING_ADDRESS_KEY,
+                    StreamPreferencesConstants.DEFAULT_STREAMING_ADDRESS
+            )
+
+            streamCommander.connect("$streamServerAddress:9002") { success ->
+                if (success) {
+                    Log.i("Streaming", "connected to $streamServerAddress:9002")
+                }
+            }
+
+            streamingEnabled = true
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+        ) {
             requestPermissions(
                     arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
                     179
             )
         }
+
+        SetupStreamingDialog()
+                .show(supportFragmentManager, StreamPreferencesConstants.STREAMING_PREFERENCES_NAME)
 
         // Ensure fullscreen immersion.
         setImmersiveSticky()
@@ -104,39 +148,14 @@ class MainActivity : Activity() {
                 object : GLSurfaceView.Renderer {
                     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
                         nativeInitializeGl(nativeTreasureHuntRenderer)
-
-                        val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer)
-                        Log.i("Streaming", "got texture with id $textureID")
-
-                        val textureWidth = nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer)
-                        val textureHeight = nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
-
-                        streamingSurfaceTexture = SurfaceTexture(textureID)
-
-                        if (true) {
-                            streamCommander = StreamCommander {
-                                StreamDecoder(
-                                        false,
-                                        Surface(streamingSurfaceTexture),
-                                        textureWidth,
-                                        textureHeight
-                                )
-                            }
-                        }
-
-                        // Setup streaming
-                        streamCommander?.connect("$STREAMING_ADDRESS:9002") { success ->
-                            if (success) {
-                                Log.i("Streaming", "connected to $STREAMING_ADDRESS:9002")
-                            }
-                        }
                     }
 
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
-                        if (streamCommander != null)
+                        if (streamingEnabled) {
                             streamingSurfaceTexture.updateTexImage()
+                        }
                         nativeDrawFrame(nativeTreasureHuntRenderer)
                     }
                 })
@@ -190,7 +209,7 @@ class MainActivity : Activity() {
         // native resources from the UI thread.
         nativeDestroyRenderer(nativeTreasureHuntRenderer)
         nativeTreasureHuntRenderer = 0
-        streamCommander?.disconnect()
+        streamCommander.disconnect()
         gvrLayout!!.shutdown()
     }
 
@@ -206,9 +225,12 @@ class MainActivity : Activity() {
         }
     }
 
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Avoid accidental volume key presses while the phone is in the VR headset.
-        return event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || super.dispatchKeyEvent(event)
+        return event.keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+                || super.dispatchKeyEvent(event)
     }
 
     private fun setImmersiveSticky() {
@@ -241,7 +263,5 @@ class MainActivity : Activity() {
             System.loadLibrary("gvr_audio")
             System.loadLibrary("treasurehunt_jni")
         }
-
-        private const val STREAMING_ADDRESS = "ws://192.168.1.112"
     }
 }

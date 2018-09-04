@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">NativeTreasureHunt</string>
+    <string name="setup_streaming">Setup streaming</string>
+    <string name="enable_streaming">Enable streaming</string>
+    <string name="streaming_server_address_hint">Streaming server address</string>
 </resources>
