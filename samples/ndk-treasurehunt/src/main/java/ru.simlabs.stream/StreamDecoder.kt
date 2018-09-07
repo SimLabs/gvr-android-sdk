@@ -15,6 +15,9 @@ class StreamDecoder(
         private var widthVal: Int,
         private var heightVal: Int
 ) {
+    private var framesProcessed = 0
+    private var framesDropped = 0
+    private var lastFramesLog: Long? = null
     private val callback = RenderToSurfaceCallback()
 
     private val decoder: MediaCodec = try {
@@ -50,6 +53,10 @@ class StreamDecoder(
 
     fun enqueueNextFrame(byteBuffer: ByteBufferList) {
         val bytes = byteBuffer.allByteArray
+
+        if (isKeyFrame(bytes))
+            Log.d(NAME, "Keyframe")
+
         if (verbose) {
             Log.d(NAME, "Accepted: ${bytes.size}")
         }
@@ -58,12 +65,24 @@ class StreamDecoder(
             return configureDecoder(bytes)
         }
 
-        val frame = Frame(bytes, System.currentTimeMillis() - startTime)
+        val currentTime = System.currentTimeMillis()
+        val frame = Frame(bytes, currentTime - startTime)
         val bufferIndex = availableInputBuffers.poll()
 
         if (bufferIndex != null) {
+            ++framesProcessed
             putFrame(bufferIndex, frame)
+        } else {
+            ++framesDropped
         }
+
+        val lastFramesLogCache = lastFramesLog
+
+        if (lastFramesLogCache == null || currentTime - lastFramesLogCache > 5000) {
+            Log.d(NAME, "Frames processed: $framesProcessed, dropped: $framesDropped")
+            lastFramesLog = currentTime
+        }
+
     }
 
     private fun configureDecoder(keyFrame: ByteArray) {
