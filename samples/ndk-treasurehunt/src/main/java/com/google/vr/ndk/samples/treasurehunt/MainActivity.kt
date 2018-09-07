@@ -152,7 +152,6 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
 
                     override fun onDrawFrame(gl: GL10) {
                         if (streamCommander.connected) {
-                            streamCommander.renderNextFrame()
                             streamingSurfaceTexture.updateTexImage()
                         }
                         nativeDrawFrame(nativeTreasureHuntRenderer)

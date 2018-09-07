@@ -14,6 +14,8 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
     private lateinit var streamDecoder: StreamDecoder
     private lateinit var webSocket: WebSocket
 
+    private var keyFrameRequestTime: Long = 0
+
     var connected = false
         private set
 
@@ -50,6 +52,14 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
 
                 streamDecoder.enqueueNextFrame(byteBufferList)
                 byteBufferList.recycle()
+
+                val timeNow = System.currentTimeMillis()
+
+                if (timeNow - keyFrameRequestTime > KEY_FRAME_INTERVAL) {
+                    send("${Command.FORCE_IDR_FRAME.ordinal}")
+
+                    keyFrameRequestTime = timeNow
+                }
             }
 
             webSocket.send("${Command.SET_CLIENT_TYPE.ordinal} ${ClientType.RawH264.ordinal}")
@@ -80,8 +90,6 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
 
     }
 
-    fun renderNextFrame() = streamDecoder.dequeueNextFrame()
-
     private fun send(msg: String) {
         if (!connected) return
         webSocket.send(msg)
@@ -108,6 +116,8 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
     }
 
     companion object {
+        private const val KEY_FRAME_INTERVAL = 5000
+
         private fun Boolean.toInt() = if(this) 1 else 0
     }
 }

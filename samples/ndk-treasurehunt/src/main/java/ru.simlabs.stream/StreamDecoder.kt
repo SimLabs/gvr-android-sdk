@@ -25,7 +25,6 @@ class StreamDecoder(
     }
 
     private val availableInputBuffers = ConcurrentLinkedQueue<Int>()
-    private val availableOutputBuffers = ConcurrentLinkedQueue<Int>()
 
     private var startTime: Long = 0
     private var isConfigured = false
@@ -67,14 +66,6 @@ class StreamDecoder(
         }
     }
 
-    fun dequeueNextFrame() {
-        val bufferIndex = availableOutputBuffers.poll() ?: return
-
-        if (isConfigured) {
-            decoder.releaseOutputBuffer(bufferIndex, true)
-        }
-    }
-
     private fun configureDecoder(keyFrame: ByteArray) {
         if (isConfigured) {
             return
@@ -97,7 +88,6 @@ class StreamDecoder(
     fun reset() {
         decoder.reset()
         availableInputBuffers.clear()
-        availableOutputBuffers.clear()
     }
 
     fun start() {
