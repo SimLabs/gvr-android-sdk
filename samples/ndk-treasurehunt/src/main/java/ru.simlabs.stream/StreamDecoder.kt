@@ -24,7 +24,8 @@ class StreamDecoder(
         throw(e)
     }
 
-    private val availableBuffers = ConcurrentLinkedQueue<Int>()
+    private val availableInputBuffers = ConcurrentLinkedQueue<Int>()
+    private val availableOutputBuffers = ConcurrentLinkedQueue<Int>()
 
     private var startTime: Long = 0
     private var isConfigured = false
@@ -59,10 +60,18 @@ class StreamDecoder(
         }
 
         val frame = Frame(bytes, System.currentTimeMillis() - startTime)
-        val bufferIndex = availableBuffers.poll()
+        val bufferIndex = availableInputBuffers.poll()
 
         if (bufferIndex != null) {
             putFrame(bufferIndex, frame)
+        }
+    }
+
+    fun dequeueNextFrame() {
+        val bufferIndex = availableOutputBuffers.poll() ?: return
+
+        if (isConfigured) {
+            decoder.releaseOutputBuffer(bufferIndex, true)
         }
     }
 
@@ -87,7 +96,8 @@ class StreamDecoder(
 
     fun reset() {
         decoder.reset()
-        availableBuffers.clear()
+        availableInputBuffers.clear()
+        availableOutputBuffers.clear()
     }
 
     fun start() {
@@ -113,7 +123,7 @@ class StreamDecoder(
             if (verbose) {
                 Log.d(NAME, "input buffer $index available")
             }
-            availableBuffers.add(index)
+            availableInputBuffers.add(index)
         }
 
         override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {

@@ -31,7 +31,6 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
             }
 
             this.webSocket = webSocket
-            connected = true
             streamDecoder = decoderFactory()
             streamDecoder.start()
 
@@ -58,6 +57,8 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
             webSocket.send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
             activatePolicy(StreamPolicy.SMOOTH)
             onConnectionResult(true)
+
+            connected = true
         }
     }
 
@@ -78,6 +79,8 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
         send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
 
     }
+
+    fun renderNextFrame() = streamDecoder.dequeueNextFrame()
 
     private fun send(msg: String) {
         if (!connected) return

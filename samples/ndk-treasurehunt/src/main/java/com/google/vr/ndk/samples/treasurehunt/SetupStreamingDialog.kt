@@ -1,12 +1,13 @@
 package com.google.vr.ndk.samples.treasurehunt
 
-import android.support.v4.app.DialogFragment
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Context
+import android.content.DialogInterface
 import android.os.Bundle
+import android.support.v4.app.DialogFragment
 import android.widget.CheckBox
 import android.widget.TextView
 import kotlinx.android.synthetic.main.dialog_streaming_setup.view.*
@@ -86,6 +87,20 @@ class SetupStreamingDialog: DialogFragment() {
                 .setNegativeButton("Discard changes") { _, _ ->
                     exitListener.onDialogExited()
                 }
-        return builder.create()
+        val dialog = builder.create()
+
+        dialog.setCanceledOnTouchOutside(true)
+
+        return dialog
+    }
+
+    override fun dismiss() {
+        super.dismiss()
+        exitListener.onDialogExited()
+    }
+
+    override fun onCancel(dialog: DialogInterface?) {
+        super.onCancel(dialog)
+        exitListener.onDialogExited()
     }
 }

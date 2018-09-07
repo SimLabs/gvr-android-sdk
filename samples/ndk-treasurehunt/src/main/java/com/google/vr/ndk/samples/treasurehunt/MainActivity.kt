@@ -65,7 +65,6 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
 
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
 
-    private var streamingEnabled = false
     private lateinit var streamingSurfaceTexture: SurfaceTexture
     private val streamCommander = StreamCommander {
         StreamDecoder(
@@ -101,8 +100,6 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                     Log.i("Streaming", "connected to $streamServerAddress:9002")
                 }
             }
-
-            streamingEnabled = true
         }
     }
 
@@ -119,9 +116,6 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
             )
         }
 
-        SetupStreamingDialog()
-                .show(supportFragmentManager, StreamPreferencesConstants.STREAMING_PREFERENCES_NAME)
-
         // Ensure fullscreen immersion.
         setImmersiveSticky()
         window
@@ -137,7 +131,11 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         nativeTreasureHuntRenderer = nativeCreateRenderer(
                 javaClass.classLoader,
                 this.applicationContext,
-                gvrLayout!!.gvrApi.nativeGvrContext)
+                gvrLayout!!.gvrApi.nativeGvrContext
+        )
+
+        SetupStreamingDialog()
+                .show(supportFragmentManager, StreamPreferencesConstants.STREAMING_PREFERENCES_NAME)
 
         // Add the GLSurfaceView to the GvrLayout.
         surfaceView = GLSurfaceView(this)
@@ -153,7 +151,8 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
-                        if (streamingEnabled) {
+                        if (streamCommander.connected) {
+                            streamCommander.renderNextFrame()
                             streamingSurfaceTexture.updateTexImage()
                         }
                         nativeDrawFrame(nativeTreasureHuntRenderer)
@@ -164,9 +163,9 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                 View.OnTouchListener { _, event ->
                     when (event.action) {
                         MotionEvent.ACTION_DOWN ->
-                            surfaceView.queueEvent { nativeOnFlyStateChanged(nativeTreasureHuntRenderer, true) }
+                            nativeOnFlyStateChanged(nativeTreasureHuntRenderer, true)
                         MotionEvent.ACTION_UP   ->
-                            surfaceView.queueEvent { nativeOnFlyStateChanged(nativeTreasureHuntRenderer, false) }
+                            nativeOnFlyStateChanged(nativeTreasureHuntRenderer, false)
                         else                    -> return@OnTouchListener false
                     }
                     return@OnTouchListener true
