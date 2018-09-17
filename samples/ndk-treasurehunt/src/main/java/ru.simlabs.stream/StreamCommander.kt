@@ -9,8 +9,7 @@ import ru.simlabs.stream.utils.Command
 import ru.simlabs.stream.utils.StreamPolicy
 import java.lang.Integer.parseInt
 
-class StreamCommander constructor(fact: () -> StreamDecoder) {
-    private val decoderFactory: () -> StreamDecoder = fact
+class StreamCommander constructor(private val decoderFactory: () -> StreamDecoder) {
     private lateinit var streamDecoder: StreamDecoder
     private lateinit var webSocket: WebSocket
 
@@ -63,9 +62,10 @@ class StreamCommander constructor(fact: () -> StreamDecoder) {
             }
 
             webSocket.send("${Command.SET_CLIENT_TYPE.ordinal} ${ClientType.RawH264.ordinal}")
-            webSocket.send("${Command.SET_CLIENT_LIMITATIONS.ordinal} 1920 1080 20")
+            activatePolicy(StreamPolicy.SHARP)
+            webSocket.send("${Command.SET_MAX_BITRATE.ordinal} 279620270")
+            webSocket.send("${Command.SET_CLIENT_LIMITATIONS.ordinal} 6000 4000 60")
             webSocket.send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
-            activatePolicy(StreamPolicy.SMOOTH)
             onConnectionResult(true)
 
             connected = true

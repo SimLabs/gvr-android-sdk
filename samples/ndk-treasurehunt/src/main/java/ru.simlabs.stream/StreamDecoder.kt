@@ -17,7 +17,8 @@ class StreamDecoder(
 ) {
     private var framesProcessed = 0
     private var framesDropped = 0
-    private var lastFramesLog: Long? = null
+    private var lastFramesLog: Long = 0
+
     private val callback = RenderToSurfaceCallback()
 
     private val decoder: MediaCodec = try {
@@ -76,13 +77,12 @@ class StreamDecoder(
             ++framesDropped
         }
 
-        val lastFramesLogCache = lastFramesLog
-
-        if (lastFramesLogCache == null || currentTime - lastFramesLogCache > 5000) {
-            Log.d(NAME, "Frames processed: $framesProcessed, dropped: $framesDropped")
-            lastFramesLog = currentTime
+        if (verbose) {
+            if (currentTime - lastFramesLog > 5000) {
+                Log.d(NAME, "Frames processed: $framesProcessed, dropped: $framesDropped")
+                lastFramesLog = currentTime
+            }
         }
-
     }
 
     private fun configureDecoder(keyFrame: ByteArray) {
