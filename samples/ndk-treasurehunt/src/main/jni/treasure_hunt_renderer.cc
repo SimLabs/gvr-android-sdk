@@ -580,6 +580,44 @@ void TreasureHuntRenderer::DrawFrame() {
     DrawWorld(kLeftView);
     DrawWorld(kRightView);
   }
+
+  {
+    uint32_t constexpr num_passes = 2;
+    wombat_android_test::render_pass_args_t passes[num_passes];
+
+    for (uint32_t eye_index = 0; eye_index < num_passes; ++eye_index)
+    {
+      auto &render_args = passes[eye_index];
+      render_args.fbo_id = fbo_id_;
+
+      ViewType view = eye_index == 0 ? kLeftView : kRightView;
+
+        const gvr::BufferViewport& viewport =
+                view == kLeftView ? viewport_left_ : viewport_right_;
+
+        const auto fov = viewport.GetSourceFov();
+        render_args.fov_rect = {fov.left, fov.right, fov.top, fov.bottom};
+
+        render_args.eye_matrix = (float *) (
+                gvr_api_->GetEyeFromHeadMatrix(eye_index == 0 ? GVR_LEFT_EYE : GVR_RIGHT_EYE).m
+        );
+
+        const gvr::Recti pixel_rect =
+                CalculatePixelSpaceRect(render_size_, viewport.GetSourceUv());
+        render_args.vp_rect = {pixel_rect.left, pixel_rect.bottom,
+                               pixel_rect.right - pixel_rect.left,
+                               pixel_rect.top - pixel_rect.bottom};
+    }
+
+
+    wombat_android_test::render_args_t ra;
+    ra.num_passes = num_passes;
+    ra.passes = passes;
+
+    face_->render(ra);
+  }
+
+
   frame.Unbind();
 
   // Draw the reticle on a separate layer.
@@ -678,35 +716,9 @@ int TreasureHuntRenderer::LoadGLShader(int type, const char** shadercode) {
  * @param view The view to render: left, right, or both (multiview).
  */
 void TreasureHuntRenderer::DrawWorld(ViewType view) {
-  wombat_android_test::render_args_t render_args;
-  render_args.fbo_id = fbo_id_;
-
-  if (view == kMultiview) {
-    render_args.vp_rect = {0, 0, render_size_.width / 2, render_size_.height};
-  } else {
-    const gvr::BufferViewport& viewport =
-        view == kLeftView ? viewport_left_ : viewport_right_;
-
-    const auto fov = viewport.GetSourceFov();
-    render_args.fov_rect = {fov.left, fov.right, fov.top, fov.bottom};
-
-    size_t eye_index = view == kLeftView ? 0 : 1;
-
-    render_args.eye_matrix = (float *) (
-            gvr_api_->GetEyeFromHeadMatrix(eye_index == 0 ? GVR_LEFT_EYE : GVR_RIGHT_EYE).m
-    );
-
-    const gvr::Recti pixel_rect =
-        CalculatePixelSpaceRect(render_size_, viewport.GetSourceUv());
-    render_args.vp_rect = {pixel_rect.left, pixel_rect.bottom,
-               pixel_rect.right - pixel_rect.left,
-               pixel_rect.top - pixel_rect.bottom};
-  }
 
 //  DrawCube(view);
 //  DrawFloor(view);
-
-  face_->render(render_args);
 }
 
 void TreasureHuntRenderer::DrawCube(ViewType view) {
