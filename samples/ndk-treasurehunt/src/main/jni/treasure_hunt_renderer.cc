@@ -571,7 +571,7 @@ void TreasureHuntRenderer::DrawFrame() {
 
   // Draw the world.
     frame.BindBuffer(0);
-    fbo_id_ = frame.GetFramebufferObject(0);
+    int32_t fbo_id = frame.GetFramebufferObject(0);
 //  glClearColor(0.1f, 0.1f, 0.1f, 0.5f);  // Dark background so text shows up.
 //  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (multiview_enabled_) {
@@ -588,7 +588,6 @@ void TreasureHuntRenderer::DrawFrame() {
     for (uint32_t eye_index = 0; eye_index < num_passes; ++eye_index)
     {
       auto &render_args = passes[eye_index];
-      render_args.fbo_id = fbo_id_;
 
       ViewType view = eye_index == 0 ? kLeftView : kRightView;
 
@@ -613,6 +612,7 @@ void TreasureHuntRenderer::DrawFrame() {
     wombat_android_test::render_args_t ra;
     ra.num_passes = num_passes;
     ra.passes = passes;
+    ra.fbo_id = fbo_id;
 
     face_->render(ra);
   }

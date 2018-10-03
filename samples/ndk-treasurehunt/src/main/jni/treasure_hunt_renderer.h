@@ -282,7 +282,6 @@ class TreasureHuntRenderer {
   gvr::ViewerType gvr_viewer_type_;
 
   std::shared_ptr<wombat_android_test::iface> face_;
-  int32_t fbo_id_ = -1;
   gvr::Mat4f eye_views[2];
   gvr::ClockTimePoint last_update;
 };
