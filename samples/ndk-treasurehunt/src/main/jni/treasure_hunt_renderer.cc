@@ -584,6 +584,7 @@ void TreasureHuntRenderer::DrawFrame() {
   {
     uint32_t constexpr num_passes = 2;
     wombat_android_test::render_pass_args_t passes[num_passes];
+      gvr::Mat4f eye_matrices[num_passes];
 
     for (uint32_t eye_index = 0; eye_index < num_passes; ++eye_index)
     {
@@ -597,9 +598,9 @@ void TreasureHuntRenderer::DrawFrame() {
         const auto fov = viewport.GetSourceFov();
         render_args.fov_rect = {fov.left, fov.right, fov.top, fov.bottom};
 
-        render_args.eye_matrix = (float *) (
-                gvr_api_->GetEyeFromHeadMatrix(eye_index == 0 ? GVR_LEFT_EYE : GVR_RIGHT_EYE).m
-        );
+        eye_matrices[eye_index] = gvr_api_->GetEyeFromHeadMatrix(eye_index == 0 ? GVR_LEFT_EYE : GVR_RIGHT_EYE);
+
+        render_args.eye_matrix = (float *)(eye_matrices[eye_index].m);
 
         const gvr::Recti pixel_rect =
                 CalculatePixelSpaceRect(render_size_, viewport.GetSourceUv());
