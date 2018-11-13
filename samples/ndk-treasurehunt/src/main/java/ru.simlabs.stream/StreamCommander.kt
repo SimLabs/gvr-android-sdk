@@ -36,13 +36,13 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
             streamDecoder.start()
 
             webSocket.setStringCallback { msg ->
-                val list = msg.split(" ")
-                if (!list.isEmpty()) {
-                    val head = Command.values()[parseInt(list[0])]
-                    val args = list.subList(1, list.size)
-                    handleMessage(head, args)
-                }
+                val delim = msg.indexOf(" ")
+                if (delim != -1) {
+                    val headIndex = parseInt(msg.substring(0, delim))
+                    val head = Command.values()[headIndex]
 
+                    handleMessage(head, msg.substring(delim + 1))
+                }
             }
 
             webSocket.setDataCallback { _, byteBufferList ->
@@ -54,11 +54,11 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
 
                 val timeNow = System.currentTimeMillis()
 
-                if (timeNow - keyFrameRequestTime > KEY_FRAME_INTERVAL) {
-                    send("${Command.FORCE_IDR_FRAME.ordinal}")
-
-                    keyFrameRequestTime = timeNow
-                }
+//                if (timeNow - keyFrameRequestTime > KEY_FRAME_INTERVAL) {
+//                    send("${Command.FORCE_IDR_FRAME.ordinal}")
+//
+//                    keyFrameRequestTime = timeNow
+//                }
             }
 
             webSocket.send("${Command.SET_CLIENT_TYPE.ordinal} ${ClientType.RawH264.ordinal}")
@@ -72,7 +72,9 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
         }
     }
 
-    private fun handleMessage(head: Command, args: List<String>) {
+    private fun handleMessage(head: Command, argsStr: String) {
+        val args = argsStr.split(" ")
+
         when(head) {
             Command.FRAME_SENT -> {
 //                send("${Command.FRAME_RECEIVED.ordinal} ${args[0]}")

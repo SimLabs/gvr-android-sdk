@@ -21,6 +21,8 @@
 #include "treasure_hunt_renderer.h"  // NOLINT
 #include "vr/gvr/capi/include/gvr.h"
 #include "vr/gvr/capi/include/gvr_audio.h"
+#include "wombat_android_test/wombat_android_test.h"
+
 
 #define JNI_METHOD(return_type, method_name) \
   JNIEXPORT return_type JNICALL              \
@@ -61,6 +63,16 @@ JNI_METHOD(void, nativeInitializeGl)
   native(native_treasure_hunt)->InitializeGl();
 }
 
+JNI_METHOD(void, nativeBeforeTextureUpdate)
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
+    native(native_treasure_hunt)->GetWombatInterface()->before_texture_update();
+}
+
+JNI_METHOD(void, nativeAfterTextureUpdate)
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
+    native(native_treasure_hunt)->GetWombatInterface()->after_texture_update();
+}
+
 JNI_METHOD(void, nativeDrawFrame)
 (JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
   native(native_treasure_hunt)->DrawFrame();
@@ -96,5 +108,12 @@ JNI_METHOD(jint, nativeGetStreamingTextureHeight)
 (JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
   return native(native_treasure_hunt)->GetStreamingTextureHeight();
 }
+
+JNI_METHOD(jstring, nativeGetHostAddress)
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
+    char const *cstr = native(native_treasure_hunt)->GetWombatInterface()->get_host_address();
+    return env->NewStringUTF(cstr);
+}
+
 
 }  // extern "C"

@@ -638,6 +638,11 @@ void TreasureHuntRenderer::DrawFrame() {
   gvr_audio_api_->Update();
 }
 
+wombat_android_test::iface *TreasureHuntRenderer::GetWombatInterface()
+{
+    return face_.get();
+}
+
 void TreasureHuntRenderer::PrepareFramebuffer() {
   // Because we are using 2X MSAA, we can render to half as many pixels and
   // achieve similar quality.

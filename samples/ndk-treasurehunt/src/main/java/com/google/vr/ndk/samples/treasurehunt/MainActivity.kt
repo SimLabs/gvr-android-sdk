@@ -35,6 +35,8 @@ import ru.simlabs.stream.StreamDecoder
 import ru.simlabs.stream.utils.StreamPreferencesConstants
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import java.util.Timer
+import kotlin.concurrent.schedule
 
 
 /**
@@ -75,6 +77,20 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         )
     }
 
+    private fun initConnection(address: String) {
+        val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer)
+        Log.i("Streaming", "got texture with id $textureID")
+
+        streamingSurfaceTexture = SurfaceTexture(textureID)
+
+        Log.i("Streaming", "Trying to connected to '$address'")
+        streamCommander.connect(address) { success ->
+            if (success) {
+                Log.i("Streaming", "connected to '$address'")
+            }
+        }
+    }
+
     override fun onDialogExited() {
         val streamingPreferences = getSharedPreferences(
                 StreamPreferencesConstants.STREAMING_PREFERENCES_NAME,
@@ -84,22 +100,13 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         if (streamingPreferences
                         .getBoolean(StreamPreferencesConstants.STREAMING_ENABLED_KEY, false)
         ) {
-            val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer)
-            Log.i("Streaming", "got texture with id $textureID")
-
-            streamingSurfaceTexture = SurfaceTexture(textureID)
-
             // Setup streaming
             val streamServerAddress = streamingPreferences.getString(
                     StreamPreferencesConstants.STREAMING_ADDRESS_KEY,
                     StreamPreferencesConstants.DEFAULT_STREAMING_ADDRESS
             )
 
-            streamCommander.connect("$streamServerAddress:9002") { success ->
-                if (success) {
-                    Log.i("Streaming", "connected to $streamServerAddress:9002")
-                }
-            }
+            initConnection("$streamServerAddress:9002")
         }
     }
 
@@ -134,8 +141,12 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                 gvrLayout!!.gvrApi.nativeGvrContext
         )
 
-        SetupStreamingDialog()
-                .show(supportFragmentManager, StreamPreferencesConstants.STREAMING_PREFERENCES_NAME)
+        //SetupStreamingDialog()
+        //        .show(supportFragmentManager, StreamPreferencesConstants.STREAMING_PREFERENCES_NAME)
+
+        Timer("SettingUp", false).schedule(1000) {
+            initConnection(nativeGetHostAddress(nativeTreasureHuntRenderer))
+        }
 
         // Add the GLSurfaceView to the GvrLayout.
         surfaceView = GLSurfaceView(this)
@@ -151,9 +162,11 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
+                        nativeBeforeTextureUpdate(nativeTreasureHuntRenderer)
                         if (streamCommander.connected) {
                             streamingSurfaceTexture.updateTexImage()
                         }
+                        nativeAfterTextureUpdate(nativeTreasureHuntRenderer)
                         nativeDrawFrame(nativeTreasureHuntRenderer)
                     }
                 })
@@ -250,10 +263,13 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
 
     private external fun nativeDestroyRenderer(nativeTreasureHuntRenderer: Long)
     private external fun nativeInitializeGl(nativeTreasureHuntRenderer: Long)
+    private external fun nativeBeforeTextureUpdate(nativeTreasureHuntRenderer: Long)
+    private external fun nativeAfterTextureUpdate(nativeTreasureHuntRenderer: Long)
     private external fun nativeDrawFrame(nativeTreasureHuntRenderer: Long): Long
     private external fun nativeOnFlyStateChanged(nativeTreasureHuntRenderer: Long, flyForward: Boolean)
     private external fun nativeOnPause(nativeTreasureHuntRenderer: Long)
     private external fun nativeOnResume(nativeTreasureHuntRenderer: Long)
+    private external fun nativeGetHostAddress(nativeTreasureHuntRenderer: Long): String
 
     companion object {
         init {

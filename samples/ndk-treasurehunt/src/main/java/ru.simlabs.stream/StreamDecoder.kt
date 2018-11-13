@@ -17,6 +17,7 @@ class StreamDecoder(
 ) {
     private var framesProcessed = 0
     private var framesDropped = 0
+    private var framesEnqueued = 0
     private var lastFramesLog: Long = 0
 
     private val callback = RenderToSurfaceCallback()
@@ -27,6 +28,7 @@ class StreamDecoder(
         Log.e(NAME, "Cannot create decoder")
         throw(e)
     }
+
 
     private val availableFrames = ConcurrentLinkedQueue<Frame>()
     private val availableInputBuffers = ConcurrentLinkedQueue<Int>()
@@ -75,14 +77,16 @@ class StreamDecoder(
             ++framesProcessed
             putFrame(bufferIndex, frame)
         } else {
+            ++framesEnqueued
 //            ++framesDropped
             availableFrames.add(frame)
         }
 
         if (currentTime - lastFramesLog > 5000) {
-            Log.d(NAME, "Frames processed: $framesProcessed, in queue: ${availableFrames.size}")
+            Log.d(NAME, "Frames processed: $framesProcessed, enqueued: $framesEnqueued")
 //               Log.d(NAME, "Frames processed: $framesProcessed, dropped: $framesDropped")
             framesProcessed = 0
+            framesEnqueued = 0
             framesDropped = 0
             lastFramesLog = currentTime
         }
@@ -92,6 +96,9 @@ class StreamDecoder(
         if (isConfigured) {
             return
         }
+
+        Log.d(NAME, "Media codec name: ${decoder.name}")
+
 
         reset()
 

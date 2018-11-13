@@ -91,6 +91,8 @@ class TreasureHuntRenderer {
    */
   int GetStreamingTextureHeight();
 
+    wombat_android_test::iface *GetWombatInterface();
+
  private:
   int CreateTexture(int width, int height, int textureFormat, int textureType);
 
