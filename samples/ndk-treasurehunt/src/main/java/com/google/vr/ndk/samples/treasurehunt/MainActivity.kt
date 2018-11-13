@@ -83,10 +83,10 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
 
         streamingSurfaceTexture = SurfaceTexture(textureID)
 
-        Log.i("Streaming", "Trying to connected to '$address'")
+        Log.i("Streaming", "Connecting to '$address'...")
         streamCommander.connect(address) { success ->
             if (success) {
-                Log.i("Streaming", "connected to '$address'")
+                Log.i("Streaming", "Successfully connected to '$address'")
             }
         }
     }
