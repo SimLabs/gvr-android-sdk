@@ -28,6 +28,7 @@ class StreamDecoder(
         throw(e)
     }
 
+    private val availableFrames = ConcurrentLinkedQueue<Frame>()
     private val availableInputBuffers = ConcurrentLinkedQueue<Int>()
 
     private var startTime: Long = 0
@@ -45,7 +46,7 @@ class StreamDecoder(
     }
 
     private fun putFrame(index: Int, frame: Frame) {
-        decoder.getInputBuffer(index).put(frame.data)
+        (decoder.getInputBuffer(index) ?: throw IllegalArgumentException("input buffer $index is not currently available")).put(frame.data)
         decoder.queueInputBuffer(index, 0, frame.data.size, frame.timestamp, 0)
         if (verbose) {
             Log.d(NAME, "filled input buffer $index with ${frame.data.size} bytes of data received at time ${frame.timestamp}")
@@ -74,14 +75,16 @@ class StreamDecoder(
             ++framesProcessed
             putFrame(bufferIndex, frame)
         } else {
-            ++framesDropped
+//            ++framesDropped
+            availableFrames.add(frame)
         }
 
-        if (verbose) {
-            if (currentTime - lastFramesLog > 5000) {
-                Log.d(NAME, "Frames processed: $framesProcessed, dropped: $framesDropped")
-                lastFramesLog = currentTime
-            }
+        if (currentTime - lastFramesLog > 5000) {
+            Log.d(NAME, "Frames processed: $framesProcessed, in queue: ${availableFrames.size}")
+//               Log.d(NAME, "Frames processed: $framesProcessed, dropped: $framesDropped")
+            framesProcessed = 0
+            framesDropped = 0
+            lastFramesLog = currentTime
         }
     }
 
@@ -132,7 +135,14 @@ class StreamDecoder(
             if (verbose) {
                 Log.d(NAME, "input buffer $index available")
             }
-            availableInputBuffers.add(index)
+            val frame = availableFrames.poll()
+
+            if (frame != null) {
+                ++framesProcessed
+                putFrame(index, frame)
+            } else {
+                availableInputBuffers.add(index)
+            }
         }
 
         override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {

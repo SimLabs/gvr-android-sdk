@@ -51,13 +51,13 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.google.vr:sdk-audio:1.150.0'
-    compile 'com.google.vr:sdk-base:1.150.0'
-    compile 'com.android.support:support-fragment:28.0.0-rc02'
-    compile 'com.koushikdutta.async:androidasync:2.2.1'
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.google.vr:sdk-audio:1.150.0'
+    implementation 'com.google.vr:sdk-base:1.150.0'
+    implementation 'com.android.support:support-fragment:28.0.0'
+    implementation 'com.koushikdutta.async:androidasync:2.2.1'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 
 build.dependsOn(':extractNdk')
