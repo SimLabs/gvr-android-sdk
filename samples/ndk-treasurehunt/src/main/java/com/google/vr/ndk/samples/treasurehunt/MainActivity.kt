@@ -68,14 +68,14 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
 
     private lateinit var streamingSurfaceTexture: SurfaceTexture
-    private val streamCommander = StreamCommander {
+    private val streamCommander = StreamCommander({
         StreamDecoder(
                 false,
                 Surface(streamingSurfaceTexture),
                 nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer),
                 nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
         )
-    }
+    }, ::onTextMessage)
 
     private fun initConnection(address: String) {
         val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer)
@@ -254,6 +254,10 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
     }
 
+    private fun onTextMessage(id: Int, argsStr: String) {
+        nativeOnTextMessage(nativeTreasureHuntRenderer, id, argsStr)
+    }
+
     private external fun nativeGetStreamingTextureID(nativeTreasureHuntRenderer: Long): Int
     private external fun nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer: Long): Int
     private external fun nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer: Long): Int
@@ -270,6 +274,7 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     private external fun nativeOnPause(nativeTreasureHuntRenderer: Long)
     private external fun nativeOnResume(nativeTreasureHuntRenderer: Long)
     private external fun nativeGetHostAddress(nativeTreasureHuntRenderer: Long): String
+    private external fun nativeOnTextMessage(nativeTreasureHuntRenderer: Long, id: Int, args: String)
 
     companion object {
         init {

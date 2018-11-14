@@ -115,5 +115,14 @@ JNI_METHOD(jstring, nativeGetHostAddress)
     return env->NewStringUTF(cstr);
 }
 
+JNI_METHOD(void, nativeOnTextMessage)
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt, jint id, jstring args) {
+    char const *args_cstr = env->GetStringUTFChars(args, nullptr);
+
+    native(native_treasure_hunt)->GetWombatInterface()->on_text_message(id, args_cstr);
+
+    env->ReleaseStringUTFChars(args, args_cstr);
+}
+
 
 }  // extern "C"
