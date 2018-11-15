@@ -10,7 +10,7 @@ import ru.simlabs.stream.utils.StreamPolicy
 import java.lang.Integer.parseInt
 
 class StreamCommander constructor(private val decoderFactory: () -> StreamDecoder,
-                                  private val onTextMessage: ((Int, String) -> Unit)? = null) {
+                                  private val onTextMessage: ((Command, String) -> Unit)? = null) {
     private lateinit var streamDecoder: StreamDecoder
     private lateinit var webSocket: WebSocket
 
@@ -47,9 +47,9 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
                     if (headIndex >= 0 && headIndex < values.size) {
                         val head = values[headIndex]
                         handleMessage(head, argsStr)
+                        onTextMessage?.invoke(head, argsStr)
                     }
 
-                    onTextMessage?.invoke(headIndex, argsStr)
                 }
             }
 
@@ -101,7 +101,7 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
     }
 
     private fun send(msg: String) {
-        if (!connected) return
+        //if (!connected) return
         webSocket.send(msg)
     }
 

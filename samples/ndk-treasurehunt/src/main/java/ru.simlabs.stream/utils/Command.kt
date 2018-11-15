@@ -19,5 +19,8 @@ enum class Command {
     FRAME_SENT,
     FORCE_FLUSH,
     SERVER_STAT_INFO,
-    SERVER_RESOLUTION
+    SERVER_RESOLUTION,
+
+    // client -> server
+    USER_MESSAGE,
 }

@@ -124,5 +124,9 @@ JNI_METHOD(void, nativeOnTextMessage)
     env->ReleaseStringUTFChars(args, args_cstr);
 }
 
+JNI_METHOD(void, nativeOnConnected)
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
+    native(native_treasure_hunt)->GetWombatInterface()->on_connected();
+}
 
 }  // extern "C"

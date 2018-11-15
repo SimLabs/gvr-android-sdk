@@ -33,9 +33,11 @@ import com.google.vr.ndk.base.GvrLayout
 import ru.simlabs.stream.StreamCommander
 import ru.simlabs.stream.StreamDecoder
 import ru.simlabs.stream.utils.StreamPreferencesConstants
+import ru.simlabs.stream.utils.Command
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import java.util.Timer
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.schedule
 
 
@@ -56,29 +58,29 @@ import kotlin.concurrent.schedule
  */
 class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     // Opaque native pointer to the native TreasureHuntRenderer instance.
-    private var nativeTreasureHuntRenderer: Long = 0
+    private val nativeTreasureHuntRenderer: AtomicLong = AtomicLong(0)
 
     private var gvrLayout: GvrLayout? = null
     private lateinit var surfaceView: GLSurfaceView
 
     // Note that pause and resume signals to the native renderer are performed on the GL thread,
     // ensuring thread-safety.
-    private val pauseNativeRunnable = Runnable { nativeOnPause(nativeTreasureHuntRenderer) }
+    private val pauseNativeRunnable = Runnable { nativeOnPause(nativeTreasureHuntRenderer.get()) }
 
-    private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer) }
+    private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer.get()) }
 
     private lateinit var streamingSurfaceTexture: SurfaceTexture
     private val streamCommander = StreamCommander({
         StreamDecoder(
                 false,
                 Surface(streamingSurfaceTexture),
-                nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer),
-                nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer)
+                nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer.get()),
+                nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer.get())
         )
     }, ::onTextMessage)
 
     private fun initConnection(address: String) {
-        val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer)
+        val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer.get())
         Log.i("Streaming", "got texture with id $textureID")
 
         streamingSurfaceTexture = SurfaceTexture(textureID)
@@ -87,6 +89,7 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         streamCommander.connect(address) { success ->
             if (success) {
                 Log.i("Streaming", "Successfully connected to '$address'")
+                nativeOnConnected(nativeTreasureHuntRenderer.get())
             }
         }
     }
@@ -135,17 +138,17 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
 
         // Initialize GvrLayout and the native renderer.
         gvrLayout = GvrLayout(this)
-        nativeTreasureHuntRenderer = nativeCreateRenderer(
+        nativeTreasureHuntRenderer.set(nativeCreateRenderer(
                 javaClass.classLoader,
                 this.applicationContext,
                 gvrLayout!!.gvrApi.nativeGvrContext
-        )
+        ))
 
         //SetupStreamingDialog()
         //        .show(supportFragmentManager, StreamPreferencesConstants.STREAMING_PREFERENCES_NAME)
 
         Timer("SettingUp", false).schedule(1000) {
-            initConnection(nativeGetHostAddress(nativeTreasureHuntRenderer))
+            initConnection(nativeGetHostAddress(nativeTreasureHuntRenderer.get()))
         }
 
         // Add the GLSurfaceView to the GvrLayout.
@@ -156,18 +159,18 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         surfaceView.setRenderer(
                 object : GLSurfaceView.Renderer {
                     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-                        nativeInitializeGl(nativeTreasureHuntRenderer)
+                        nativeInitializeGl(nativeTreasureHuntRenderer.get())
                     }
 
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
 
                     override fun onDrawFrame(gl: GL10) {
-                        nativeBeforeTextureUpdate(nativeTreasureHuntRenderer)
+                        nativeBeforeTextureUpdate(nativeTreasureHuntRenderer.get())
                         if (streamCommander.connected) {
                             streamingSurfaceTexture.updateTexImage()
                         }
-                        nativeAfterTextureUpdate(nativeTreasureHuntRenderer)
-                        nativeDrawFrame(nativeTreasureHuntRenderer)
+                        nativeAfterTextureUpdate(nativeTreasureHuntRenderer.get())
+                        nativeDrawFrame(nativeTreasureHuntRenderer.get())
                     }
                 })
 
@@ -175,9 +178,9 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                 View.OnTouchListener { _, event ->
                     when (event.action) {
                         MotionEvent.ACTION_DOWN ->
-                            nativeOnFlyStateChanged(nativeTreasureHuntRenderer, true)
+                            nativeOnFlyStateChanged(nativeTreasureHuntRenderer.get(), true)
                         MotionEvent.ACTION_UP   ->
-                            nativeOnFlyStateChanged(nativeTreasureHuntRenderer, false)
+                            nativeOnFlyStateChanged(nativeTreasureHuntRenderer.get(), false)
                         else                    -> return@OnTouchListener false
                     }
                     return@OnTouchListener true
@@ -218,8 +221,8 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         // Destruction order is important; shutting down the GvrLayout will detach
         // the GLSurfaceView and stop the GL thread, allowing safe shutdown of
         // native resources from the UI thread.
-        nativeDestroyRenderer(nativeTreasureHuntRenderer)
-        nativeTreasureHuntRenderer = 0
+        nativeDestroyRenderer(nativeTreasureHuntRenderer.get())
+        nativeTreasureHuntRenderer.set(0)
         streamCommander.disconnect()
         gvrLayout!!.shutdown()
     }
@@ -254,8 +257,9 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
     }
 
-    private fun onTextMessage(id: Int, argsStr: String) {
-        nativeOnTextMessage(nativeTreasureHuntRenderer, id, argsStr)
+    private fun onTextMessage(id: Command, argsStr: String) {
+        if (id == Command.USER_MESSAGE)
+            nativeOnTextMessage(nativeTreasureHuntRenderer.get(), 0, argsStr)
     }
 
     private external fun nativeGetStreamingTextureID(nativeTreasureHuntRenderer: Long): Int
@@ -275,6 +279,7 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     private external fun nativeOnResume(nativeTreasureHuntRenderer: Long)
     private external fun nativeGetHostAddress(nativeTreasureHuntRenderer: Long): String
     private external fun nativeOnTextMessage(nativeTreasureHuntRenderer: Long, id: Int, args: String)
+    private external fun nativeOnConnected(nativeTreasureHuntRenderer: Long)
 
     companion object {
         init {
