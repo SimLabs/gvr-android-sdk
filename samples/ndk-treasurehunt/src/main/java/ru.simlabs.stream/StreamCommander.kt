@@ -88,6 +88,9 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
 //                send("${Command.FRAME_RECEIVED.ordinal} ${args[0]}")
                 onNewFrame?.invoke(args[0])
             }
+            Command.USER_MESSAGE -> {
+
+            }
             else -> println("From server: ${head.name} $args")
         }
     }

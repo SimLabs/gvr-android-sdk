@@ -28,7 +28,7 @@
 
   <application
       android:allowBackup="true"
-      android:label="MainActivity"
+      android:label="SimLabsVRActivity"
       android:theme="@style/VrActivityTheme">
     <activity
         android:name=".MainActivity"
@@ -44,6 +44,8 @@
                  android:resource="@drawable/vr_icon" />
       <meta-data android:name="com.google.android.vr.icon_background"
                  android:resource="@drawable/vr_icon_background" />
+
+      <meta-data android:name="android.max_aspect" android:value="2.2" />
 
       <!-- Intent filter that enables this app to be launched from the
            Daydream Home menu. -->
