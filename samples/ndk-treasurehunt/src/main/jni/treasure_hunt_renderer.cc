@@ -258,9 +258,8 @@ void TreasureHuntRenderer::DrawFrame() {
   face_->update(args);
   last_update = time_now;
 
-    frame.BindBuffer(0);
-    int32_t fbo_id = frame.GetFramebufferObject(0);
-
+  frame.BindBuffer(0);
+  int32_t fbo_id = frame.GetFramebufferObject(0);
 
   {
     uint32_t constexpr num_passes = 2;

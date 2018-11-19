@@ -23,6 +23,7 @@ import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.support.v4.app.FragmentActivity
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -60,6 +61,7 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     // Opaque native pointer to the native TreasureHuntRenderer instance.
     private val nativeTreasureHuntRenderer: AtomicLong = AtomicLong(0)
 
+    private val displayMetrics = DisplayMetrics()
     private var gvrLayout: GvrLayout? = null
     private lateinit var surfaceView: GLSurfaceView
 
@@ -139,7 +141,7 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         // Initialize GvrLayout and the native renderer.
         gvrLayout = GvrLayout(this)
         nativeTreasureHuntRenderer.set(nativeCreateRenderer(
-                javaClass.classLoader,
+                javaClass.classLoader!!,
                 this.applicationContext,
                 gvrLayout!!.gvrApi.nativeGvrContext
         ))
@@ -160,9 +162,19 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                 object : GLSurfaceView.Renderer {
                     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
                         nativeInitializeGl(nativeTreasureHuntRenderer.get())
+
+                        windowManager.defaultDisplay.getMetrics(displayMetrics)
                     }
 
-                    override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {}
+                    override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
+                        if (displayMetrics.widthPixels != surfaceView.width ||
+                                displayMetrics.heightPixels != surfaceView.height) {
+                            gvrLayout!!.setFixedPresentationSurfaceSize(
+                                    surfaceView.width,
+                                    surfaceView.height
+                            )
+                        }
+                    }
 
                     override fun onDrawFrame(gl: GL10) {
                         nativeBeforeTextureUpdate(nativeTreasureHuntRenderer.get())
@@ -185,6 +197,7 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                     }
                     return@OnTouchListener true
                 })
+
         gvrLayout!!.setPresentationView(surfaceView)
 
         // Add the GvrLayout to the View hierarchy.
