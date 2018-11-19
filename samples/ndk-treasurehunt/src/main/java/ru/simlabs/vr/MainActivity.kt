@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.google.vr.ndk.samples.treasurehunt
+package ru.simlabs.vr
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -167,12 +167,13 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                     }
 
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
-                        if (displayMetrics.widthPixels != surfaceView.width ||
-                                displayMetrics.heightPixels != surfaceView.height) {
-                            gvrLayout!!.setFixedPresentationSurfaceSize(
-                                    surfaceView.width,
-                                    surfaceView.height
-                            )
+                        if (displayMetrics.widthPixels != width ||
+                                displayMetrics.heightPixels != height) {
+                            Log.d("GVR Surface", "resising to ${width}x$height")
+//                            gvrLayout!!.setFixedPresentationSurfaceSize(
+//                                    width,
+//                                    height
+//                            )
                         }
                     }
 
@@ -261,13 +262,14 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     }
 
     private fun setImmersiveSticky() {
-        window
-                .decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+        window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
     }
 
     private fun onTextMessage(id: Command, argsStr: String) {

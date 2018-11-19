@@ -1,4 +1,4 @@
-package com.google.vr.ndk.samples.treasurehunt
+package ru.simlabs.vr
 
 import android.annotation.SuppressLint
 import android.app.Activity
