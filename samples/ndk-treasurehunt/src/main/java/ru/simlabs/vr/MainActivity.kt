@@ -19,6 +19,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
@@ -167,14 +168,11 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                     }
 
                     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
-                        if (displayMetrics.widthPixels != width ||
-                                displayMetrics.heightPixels != height) {
-                            Log.d("GVR Surface", "resising to ${width}x$height")
-//                            gvrLayout!!.setFixedPresentationSurfaceSize(
-//                                    width,
-//                                    height
-//                            )
-                        }
+//                        if (displayMetrics.widthPixels != width ||
+//                                displayMetrics.heightPixels != height) {
+//                            Log.d("GVR Surface", "resising to ${width}x$height")
+//                            gvrLayout!!.setFixedPresentationSurfaceSize(width, height)
+//                        }
                     }
 
                     override fun onDrawFrame(gl: GL10) {

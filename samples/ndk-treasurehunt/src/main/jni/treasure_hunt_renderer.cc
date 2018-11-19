@@ -317,6 +317,7 @@ void TreasureHuntRenderer::PrepareFramebuffer() {
       HalfPixelCount(gvr_api_->GetMaximumEffectiveRenderTargetSize());
   if (render_size_.width != recommended_size.width ||
       render_size_.height != recommended_size.height) {
+    LOGD("Preparing framebuffer of size %dx%d", recommended_size.width, recommended_size.height);
     // We need to resize the framebuffer. Note that multiview uses two texture
     // layers, each with half the render width.
     gvr::Sizei framebuffer_size = recommended_size;
