@@ -70,9 +70,9 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
             }
 
             webSocket.send("${Command.SET_CLIENT_TYPE.ordinal} ${ClientType.RawH264.ordinal}")
-            activatePolicy(StreamPolicy.SHARP)
-            webSocket.send("${Command.SET_MAX_BITRATE.ordinal} 279620270")
-            webSocket.send("${Command.SET_CLIENT_LIMITATIONS.ordinal} 6000 4000 60")
+            //activatePolicy(StreamPolicy.SHARP)
+            //webSocket.send("${Command.SET_MAX_BITRATE.ordinal} 16 * 1024 * 1024")
+            //webSocket.send("${Command.SET_CLIENT_LIMITATIONS.ordinal} 1920 1280 30")
             webSocket.send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
             onConnectionResult(true)
 
