@@ -133,6 +133,9 @@ class TreasureHuntRenderer {
    */
   void ResumeControllerApiAsNeeded();
 
+    gvr::Sizei HalfPixelCount(const gvr::Sizei& in);
+
+
   std::unique_ptr<gvr::GvrApi> gvr_api_;
   std::unique_ptr<gvr::AudioApi> gvr_audio_api_;
   std::unique_ptr<gvr::BufferViewportList> viewport_list_;
@@ -164,6 +167,7 @@ class TreasureHuntRenderer {
   gvr::ViewerType gvr_viewer_type_;
 
   std::shared_ptr<wombat_android_test::iface> face_;
+  double pixel_count_ratio_ = 0.7;
   gvr::Mat4f eye_views[2];
   gvr::ClockTimePoint last_update;
 };

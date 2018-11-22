@@ -87,18 +87,20 @@ static void CheckGLError(const char* label) {
     //abort();
   }
 }
+}  // anonymous namespace
 
 // Computes a texture size that has approximately half as many pixels. This is
 // equivalent to scaling each dimension by approximately sqrt(2)/2.
-static gvr::Sizei HalfPixelCount(const gvr::Sizei& in) {
-  // Scale each dimension by sqrt(2)/2 ~= 7/10ths.
+gvr::Sizei TreasureHuntRenderer::HalfPixelCount(const gvr::Sizei& in)
+{
+
+        // Scale each dimension by sqrt(2)/2 ~= 7/10ths.
   gvr::Sizei out;
-  out.width = (7 * in.width) / 10;
-  out.height = (7 * in.height) / 10;
+  out.width = int(pixel_count_ratio_ * in.width);
+  out.height = int(pixel_count_ratio_ * in.height);
   return out;
 }
 
-}  // anonymous namespace
 
 TreasureHuntRenderer::TreasureHuntRenderer(
     gvr_context* gvr_context, std::unique_ptr<gvr::AudioApi> gvr_audio_api)
@@ -113,6 +115,7 @@ TreasureHuntRenderer::TreasureHuntRenderer(
       gvr_controller_api_(nullptr),
       gvr_viewer_type_(gvr_api_->GetViewerType()),
       face_(wombat_android_test::create({}), wombat_android_test::destroy),
+      pixel_count_ratio_ (face_->get_pixel_ratio()),
       last_update(gvr::GvrApi::GetTimePointNow()) {
   ResumeControllerApiAsNeeded();
 
@@ -145,7 +148,7 @@ void TreasureHuntRenderer::InitializeGl() {
   specs.push_back(gvr_api_->CreateBufferSpec());
   specs[0].SetColorFormat(GVR_COLOR_FORMAT_RGBA_8888);
   specs[0].SetDepthStencilFormat(GVR_DEPTH_STENCIL_FORMAT_DEPTH_16);
-  specs[0].SetSamples(2);
+  specs[0].SetSamples(1);
 
   // With multiview, the distortion buffer is a texture array with two layers
   // whose width is half the display width.
