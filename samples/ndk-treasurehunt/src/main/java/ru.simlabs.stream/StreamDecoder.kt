@@ -55,7 +55,7 @@ class StreamDecoder(
         }
     }
 
-    fun enqueueNextFrame(byteBuffer: ByteBufferList) {
+    fun enqueueNextFrame(frameId: Int, byteBuffer: ByteBufferList) {
         val bytes = byteBuffer.allByteArray
 
         if (isKeyFrame(bytes))
@@ -70,7 +70,7 @@ class StreamDecoder(
         }
 
         val currentTime = System.currentTimeMillis()
-        val frame = Frame(bytes, currentTime - startTime)
+        val frame = Frame(bytes, frameId.toLong())
         val bufferIndex = availableInputBuffers.poll()
 
         if (bufferIndex != null) {

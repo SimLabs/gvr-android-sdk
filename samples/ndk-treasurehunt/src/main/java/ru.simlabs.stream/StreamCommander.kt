@@ -2,12 +2,15 @@ package ru.simlabs.stream
 
 import android.util.Log
 import android.view.Surface
+import com.koushikdutta.async.ByteBufferList
+import com.koushikdutta.async.DataEmitter
 import com.koushikdutta.async.http.AsyncHttpClient
 import com.koushikdutta.async.http.WebSocket
 import ru.simlabs.stream.utils.ClientType
 import ru.simlabs.stream.utils.Command
 import ru.simlabs.stream.utils.StreamPolicy
 import java.lang.Integer.parseInt
+import java.util.concurrent.ConcurrentLinkedQueue
 
 class StreamCommander constructor(private val decoderFactory: () -> StreamDecoder,
                                   private val onTextMessage: ((Command, String) -> Unit)? = null) {
@@ -20,6 +23,13 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
         private set
 
     var onNewFrame: ((String) -> Unit)? = null
+
+    var pendingFrameUserDataSize: Int? = null
+
+    var nextFrameId: Int = 1
+
+    class UserData(val timestamp: Long, val data: ByteArray)
+    val pendingUserDatas = ConcurrentLinkedQueue<UserData>()
 
     fun connect(address: String, onConnectionResult: (Boolean) -> Unit) {
         if (connected) return
@@ -36,38 +46,8 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
             streamDecoder = decoderFactory()
             streamDecoder.start()
 
-            webSocket.setStringCallback { msg ->
-                val delim = msg.indexOf(" ")
-                if (delim != -1) {
-                    val headIndex = parseInt(msg.substring(0, delim))
-                    val values = Command.values()
-
-                    val argsStr = msg.substring(delim + 1)
-
-                    if (headIndex >= 0 && headIndex < values.size) {
-                        val head = values[headIndex]
-                        handleMessage(head, argsStr)
-                        onTextMessage?.invoke(head, argsStr)
-                    }
-
-                }
-            }
-
-            webSocket.setDataCallback { _, byteBufferList ->
-                if (byteBufferList.isEmpty)
-                    return@setDataCallback
-
-                streamDecoder.enqueueNextFrame(byteBufferList)
-                byteBufferList.recycle()
-
-                val timeNow = System.currentTimeMillis()
-
-//                if (timeNow - keyFrameRequestTime > KEY_FRAME_INTERVAL) {
-//                    send("${Command.FORCE_IDR_FRAME.ordinal}")
-//
-//                    keyFrameRequestTime = timeNow
-//                }
-            }
+            webSocket.setStringCallback(::onStringCallback)
+            webSocket.setDataCallback(::onDataCallback)
 
             webSocket.send("${Command.SET_CLIENT_TYPE.ordinal} ${ClientType.RawH264.ordinal}")
             //activatePolicy(StreamPolicy.SHARP)
@@ -87,6 +67,7 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
             Command.FRAME_SENT -> {
 //                send("${Command.FRAME_RECEIVED.ordinal} ${args[0]}")
                 onNewFrame?.invoke(args[0])
+                beginNewFrame(if (args.size > 2) args[2].toInt() else 0)
             }
             Command.USER_MESSAGE -> {
 
@@ -100,12 +81,65 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
 
         streamDecoder.resize(surface, width, height)
         send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
-
     }
 
     private fun send(msg: String) {
         //if (!connected) return
         webSocket.send(msg)
+    }
+
+    private fun onStringCallback(msg: String) {
+        val delim = msg.indexOf(" ")
+        if (delim != -1) {
+            val headIndex = parseInt(msg.substring(0, delim))
+            val values = Command.values()
+
+            val argsStr = msg.substring(delim + 1)
+
+            if (headIndex >= 0 && headIndex < values.size) {
+                val head = values[headIndex]
+                handleMessage(head, argsStr)
+                onTextMessage?.invoke(head, argsStr)
+            }
+
+        }
+    }
+
+    private fun onDataCallback(emitter: DataEmitter, byteBufferList: ByteBufferList) {
+        if (byteBufferList.isEmpty)
+            return
+
+        val expectedUserDataSize = pendingFrameUserDataSize
+        pendingFrameUserDataSize = null
+
+        if (expectedUserDataSize == null) {
+            streamDecoder.enqueueNextFrame(nextFrameId, byteBufferList)
+        } else {
+            val realUserDataSize = byteBufferList.remaining()
+            assert(expectedUserDataSize == realUserDataSize)
+
+            val ud = UserData(nextFrameId.toLong(), byteBufferList.allByteArray)
+            pendingUserDatas.add(ud)
+        }
+
+        byteBufferList.recycle()
+
+//         val timeNow = System.currentTimeMillis()
+
+//                if (timeNow - keyFrameRequestTime > KEY_FRAME_INTERVAL) {
+//                    send("${Command.FORCE_IDR_FRAME.ordinal}")
+//
+//                    keyFrameRequestTime = timeNow
+//                }
+
+    }
+
+    private fun beginNewFrame(userDataSize: Int) {
+        if (pendingFrameUserDataSize != null)
+            Log.e("Stream commander", "Not expecting new frame")
+
+        pendingFrameUserDataSize = userDataSize
+        ++nextFrameId
     }
 
     fun activatePolicy(preset: StreamPolicy) {

@@ -82,6 +82,8 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         )
     }, ::onTextMessage)
 
+    private var lastTextureTimestamp: Long = 0
+
     private fun initConnection(address: String) {
         val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer.get())
         Log.i("Streaming", "got texture with id $textureID")
@@ -179,6 +181,10 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                         nativeBeforeTextureUpdate(nativeTreasureHuntRenderer.get())
                         if (streamCommander.connected) {
                             streamingSurfaceTexture.updateTexImage()
+                            val ts = streamingSurfaceTexture.timestamp / 1000
+
+                            extractActualUserData(ts)
+
                         }
                         nativeAfterTextureUpdate(nativeTreasureHuntRenderer.get())
                         nativeDrawFrame(nativeTreasureHuntRenderer.get())
@@ -273,6 +279,32 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     private fun onTextMessage(id: Command, argsStr: String) {
         if (id == Command.USER_MESSAGE)
             nativeOnTextMessage(nativeTreasureHuntRenderer.get(), 0, argsStr)
+    }
+
+    private fun extractActualUserData(ts: Long) {
+        assert(ts >= lastTextureTimestamp)
+        if (ts == lastTextureTimestamp)
+            return
+
+        lastTextureTimestamp = ts
+
+        val userData = streamCommander.pendingUserDatas
+        while (true) {
+            val top = userData.peek()
+
+            if (top.timestamp > ts)
+                Log.e("Streaming", "Unexpected user data timestamp: ${top.timestamp} > $ts")
+
+            assert(top.timestamp <= ts)
+
+            if (top.timestamp == ts) {
+                userData.poll()
+
+                break
+            }
+
+            userData.poll()
+        }
     }
 
     private external fun nativeGetStreamingTextureID(nativeTreasureHuntRenderer: Long): Int
