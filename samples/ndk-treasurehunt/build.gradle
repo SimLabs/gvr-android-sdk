@@ -14,17 +14,20 @@ android {
             cmake {
                 cppFlags "-std=c++17",
                          "-D_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE",
-                         "-D__forceinline=inline",
-                         "-g"
+                         "-D__forceinline=inline"
                 arguments "-DANDROID_STL=c++_static",
                           "-DGVR_LIBPATH=${project.rootDir}/libraries/jni",
                           "-DGVR_INCLUDE=${project.rootDir}/libraries/headers"
             }
         }
         buildTypes {
+            debug {
+                externalNativeBuild.cmake.cppFlags.add("-g")
+            }
             release {
-                minifyEnabled = true
+//                minifyEnabled = true
                 proguardFiles.add(file("${project.rootDir}/proguard-gvr.txt"))
+                externalNativeBuild.cmake.cppFlags.addAll("-O2", "-DLOCAL_WHOLE_STATIC_LIBRARIES")
             }
         }
         ndk {
