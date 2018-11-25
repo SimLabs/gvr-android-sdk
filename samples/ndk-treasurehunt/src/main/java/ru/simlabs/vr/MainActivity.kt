@@ -298,6 +298,8 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
             assert(top.timestamp <= ts)
 
             if (top.timestamp == ts) {
+                nativeSetUserData(nativeTreasureHuntRenderer.get(), top.data)
+
                 userData.poll()
 
                 break
@@ -325,6 +327,7 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     private external fun nativeGetHostAddress(nativeTreasureHuntRenderer: Long): String
     private external fun nativeOnTextMessage(nativeTreasureHuntRenderer: Long, id: Int, args: String)
     private external fun nativeOnConnected(nativeTreasureHuntRenderer: Long)
+    private external fun nativeSetUserData(nativeTreasureHuntRenderer: Long, userData: ByteArray)
 
     companion object {
         init {

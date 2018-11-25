@@ -129,4 +129,12 @@ JNI_METHOD(void, nativeOnConnected)
     native(native_treasure_hunt)->GetWombatInterface()->on_connected();
 }
 
+JNI_METHOD(void, nativeSetUserData)
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt, jbyteArray userData) {
+    jbyte *ptr = env->GetByteArrayElements(userData, nullptr);
+    jsize const len = env->GetArrayLength(userData);
+
+    native(native_treasure_hunt)->GetWombatInterface()->set_user_data(reinterpret_cast<char const *>(ptr), len);
+    env->ReleaseByteArrayElements(userData, ptr, JNI_ABORT);
+}
 }  // extern "C"
