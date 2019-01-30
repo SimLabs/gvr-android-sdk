@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 class StreamCommander constructor(private val decoderFactory: () -> StreamDecoder,
                                   private val onTextMessage: ((Command, String) -> Unit)? = null) {
     private lateinit var streamDecoder: StreamDecoder
+    private var streamDecoder2: StreamDecoder? = null
     private lateinit var webSocket: WebSocket
 
     private var keyFrameRequestTime: Long = 0
@@ -45,6 +46,10 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
             this.webSocket = webSocket
             streamDecoder = decoderFactory()
             streamDecoder.start()
+
+            streamDecoder2 = decoderFactory()
+            streamDecoder2?.resize(null, streamDecoder.width, streamDecoder.height)
+            streamDecoder2?.start()
 
             webSocket.setStringCallback(::onStringCallback)
             webSocket.setDataCallback(::onDataCallback)
@@ -80,6 +85,8 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
         if (surface == null) return
 
         streamDecoder.resize(surface, width, height)
+
+        streamDecoder2?.resize(null, width, height)
         send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
     }
 
@@ -113,7 +120,11 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
         pendingFrameUserDataSize = null
 
         if (expectedUserDataSize == null) {
-            streamDecoder.enqueueNextFrame(nextFrameId, byteBufferList)
+            val bytes = byteBufferList.allByteArray
+
+            streamDecoder.enqueueNextFrame(nextFrameId, bytes)
+
+            streamDecoder2?.enqueueNextFrame(nextFrameId, bytes)
         } else {
             val realUserDataSize = byteBufferList.remaining()
             assert(expectedUserDataSize == realUserDataSize)
@@ -158,6 +169,9 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
         if (connected) {
             webSocket.close()
             streamDecoder.close()
+
+            streamDecoder2?.close()
+
             connected = false
         }
     }

@@ -23,6 +23,7 @@ import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
+import android.provider.Contacts
 import android.support.v4.app.FragmentActivity
 import android.util.DisplayMetrics
 import android.util.Log
@@ -152,10 +153,6 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
         //SetupStreamingDialog()
         //        .show(supportFragmentManager, StreamPreferencesConstants.STREAMING_PREFERENCES_NAME)
 
-        Timer("SettingUp", false).schedule(1000) {
-            initConnection(nativeGetHostAddress(nativeTreasureHuntRenderer.get()))
-        }
-
         // Add the GLSurfaceView to the GvrLayout.
         surfaceView = GLSurfaceView(this)
         surfaceView.setEGLContextClientVersion(3)
@@ -166,6 +163,7 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
                         nativeInitializeGl(nativeTreasureHuntRenderer.get())
 
+                        initConnection(nativeGetHostAddress(nativeTreasureHuntRenderer.get()))
                         windowManager.defaultDisplay.getMetrics(displayMetrics)
                     }
 

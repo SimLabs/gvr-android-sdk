@@ -55,9 +55,7 @@ class StreamDecoder(
         }
     }
 
-    fun enqueueNextFrame(frameId: Int, byteBuffer: ByteBufferList) {
-        val bytes = byteBuffer.allByteArray
-
+    fun enqueueNextFrame(frameId: Int, bytes: ByteArray) {
         if (isKeyFrame(bytes))
             Log.d(NAME, "Keyframe")
 
