@@ -239,6 +239,14 @@ const gvr_user_prefs* gvr_get_user_prefs(gvr_context* gvr);
 int32_t gvr_user_prefs_get_controller_handedness(
     const gvr_user_prefs* user_prefs);
 
+/// Queries whether a particular GVR feature has been enabled by the user.
+///
+/// @param gvr The context to query against.
+/// @param feature The gvr_runtime_feature type being queried.
+/// @return true if feature has been enabled by the user, false otherwise.
+bool gvr_user_prefs_is_feature_enabled(const gvr_user_prefs* user_prefs,
+                                       int32_t runtime_feature);
+
 /// Destroys a gvr_context instance.  The parameter will be nulled by this
 /// operation.  Once this function is called, the behavior of any subsequent
 /// call to a GVR SDK function that references objects created from this
@@ -379,6 +387,29 @@ void gvr_distort_to_screen(gvr_context* gvr, int32_t texture_id,
 /// @param feature The gvr_feature type being queried.
 /// @return true if feature is supported, false otherwise.
 bool gvr_is_feature_supported(const gvr_context* gvr, int32_t feature);
+
+/// Request that the user enables one or more features. This API will return
+/// immediately and will asynchronously ask the user to enable features using
+/// a new Activity.
+///
+/// @param required_features A list of required features of type
+///     gvr_runtime_feature. The user will not be returned to the app if they
+///     decline a required feature. This can be null if there are no required
+///     features.
+/// @param required_count Number of required features in the array.
+/// @param optional_features A list of optional features of type
+///     gvr_runtime_feature. This can be null if there are no optional
+///     features.
+/// @param optional_count Number of optional features in the array.
+/// @param on_complete_activity A Java PendingIntent (jobject) that is triggered
+///     once the user has accepted all required features. This can be null to
+///     return to this activity.
+void gvr_request_features(const gvr_context* gvr,
+                          const int32_t* required_features,
+                          int32_t required_count,
+                          const int32_t* optional_features,
+                          int32_t optional_count,
+                          void* on_complete_activity);
 
 /// @}
 
@@ -1056,6 +1087,11 @@ class UserPrefs : public WrapperBase<const gvr_user_prefs> {
     return static_cast<ControllerHandedness>(
         gvr_user_prefs_get_controller_handedness(cobj()));
   }
+
+  /// For more information, see gvr_user_prefs_is_feature_enabled().
+  bool IsFeatureEnabled(int32_t feature) const {
+    return gvr_user_prefs_is_feature_enabled(cobj(), feature);
+  }
 };
 
 /// Convenience C++ wrapper for gvr_properties.
@@ -1578,9 +1614,21 @@ class GvrApi {
   }
 
   /// For more information, see gvr_is_feature_supported().
-  bool IsFeatureSupported(int32_t feature) {
+  bool IsFeatureSupported(int32_t feature) const {
     return gvr_is_feature_supported(context_, feature);
   }
+
+  /// For more information, see gvr_request_features().
+  void RequestFeatures(const int32_t* required_features,
+                      int32_t required_count,
+                      const int32_t* optional_features,
+                      int32_t optional_count,
+                      void* on_complete_activity) const {
+    gvr_request_features(context_, required_features, required_count,
+                         optional_features, optional_count,
+                         on_complete_activity);
+  }
+
 
   /// For more information, see gvr_buffer_spec_create().
   BufferSpec CreateBufferSpec() {

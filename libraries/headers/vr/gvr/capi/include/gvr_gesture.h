@@ -285,42 +285,42 @@ class GestureApi
 
   /// Returns the number of gestures detected.
   /// For more information, see gvr_gesture_get_count().
-  int GetGestureCount() { return gvr_gesture_get_count(cobj()); }
+  int GetGestureCount() const { return gvr_gesture_get_count(cobj()); }
 
   /// Returns the gesture at given index.
   /// For more information, see gvr_gesture_get().
-  const Gesture* GetGesture(int index) {
+  const Gesture* GetGesture(int index) const {
     return gvr_gesture_get(cobj(), index);
   }
 
   /// Returns the type of the given gesture.
   /// For more information, see gvr_gesture_get_type().
-  GestureType GetGestureType(const Gesture* gesture) {
+  GestureType GetGestureType(const Gesture* gesture) const {
     return gvr_gesture_get_type(gesture);
   }
 
   /// Returns the direction of current gesture.
   /// For more information, see gvr_gesture_get_direction().
-  GestureDirection GetGestureDirection(const Gesture* gesture) {
+  GestureDirection GetGestureDirection(const Gesture* gesture) const {
     return gvr_gesture_get_direction(gesture);
   }
 
   /// Returns gesture velocity.
   /// For more information, see gvr_gesture_get_velocity().
-  gvr_vec2f GetVelocity(const Gesture* gesture) {
+  gvr_vec2f GetVelocity(const Gesture* gesture) const {
     return gvr_gesture_get_velocity(gesture);
   }
 
   /// Returns gesture displacement.
   /// For more information, see gvr_gesture_get_displacement().
-  gvr_vec2f GetDisplacement(const Gesture* gesture) {
+  gvr_vec2f GetDisplacement(const Gesture* gesture) const {
     return gvr_gesture_get_displacement(gesture);
   }
 
   /// Returns whether long press on the given controller button is detected.
   /// For more information, see gvr_get_button_long_press().
   bool GetButtonLongPress(const ControllerState* controller_state,
-                          ControllerButton button) {
+                          ControllerButton button) const {
     return gvr_get_button_long_press(controller_state->cobj(), cobj(),
                                      button);
   }

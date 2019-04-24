@@ -49,7 +49,7 @@ typedef enum {
   /// simple touchscreen-based trigger input mechanism. On most platforms, this
   /// is the default viewer type if no viewer has been explicitly paired.
   GVR_VIEWER_TYPE_CARDBOARD = 0,
-  /// A Daydream-compatible viewer. A typical Daydream viewer supports 3DOF
+  /// A Daydream-compatible viewer. A typical Daydream viewer supports 3DoF
   /// controller input (as defined in gvr_controller.h), and is intended only
   /// for Daydream-ready platforms. It does *not* support touchscreen-based
   /// input unless Cardboard emulation is explicitly enabled.
@@ -82,6 +82,16 @@ typedef enum {
   /// supports this rendering path.
   GVR_FEATURE_HARDWARE_BUFFERS = 4,
 } gvr_feature;
+
+/// Types of Daydream features that the user may enable or disable at runtime.
+/// These feature constants can be used with gvr_is_feature_supported and
+/// gvr_user_prefs_is_feature_enabled
+///
+/// See com.google.vr.ndk.base.UserPrefs.RuntimeFeature for more information.
+typedef enum {
+  GVR_BETA_FEATURE_DAYDREAM_6DOF_CONTROLLER = 1000,
+  GVR_BETA_FEATURE_SEE_THROUGH = 1001
+} gvr_runtime_feature;
 
 /// @}
 
@@ -326,11 +336,12 @@ enum {
   GVR_CONTROLLER_ENABLE_GESTURES = 1 << 4,
   /// Indicates that controller pose prediction should be enabled.
   GVR_CONTROLLER_ENABLE_POSE_PREDICTION = 1 << 5,
-  /// Indicates that controller position data should be reported.
+  /// Indicates that system should provide real position data if available.
   GVR_CONTROLLER_ENABLE_POSITION = 1 << 6,
   /// Indicates that controller battery data should be reported.
   GVR_CONTROLLER_ENABLE_BATTERY = 1 << 7,
-  /// Indicates that elbow model should be enabled.
+  /// Indicates that elbow model should be enabled if the system doesn't provide
+  /// real position data.
   GVR_CONTROLLER_ENABLE_ARM_MODEL = 1 << 8,
 };
 
@@ -380,8 +391,8 @@ typedef enum {
   GVR_CONTROLLER_BUTTON_APP = 3,
   GVR_CONTROLLER_BUTTON_VOLUME_UP = 4,
   GVR_CONTROLLER_BUTTON_VOLUME_DOWN = 5,
-  GVR_CONTROLLER_BUTTON_RESERVED0 = 6,
-  GVR_CONTROLLER_BUTTON_RESERVED1 = 7,
+  GVR_CONTROLLER_BUTTON_TRIGGER = 6,
+  GVR_CONTROLLER_BUTTON_GRIP = 7,
   GVR_CONTROLLER_BUTTON_RESERVED2 = 8,
 
   /// Note: there are 8 buttons on the controller, but the state arrays have
@@ -603,12 +614,24 @@ typedef enum {
 
 /// Types of gaze behaviors used for arm model.
 typedef enum {
-  // Body rotation matches head rotation all the time.
+  // Body rotation matches head rotation all the time. The controller's
+  // simulated shoulder position will shift as the head rotates.
   GVR_ARM_MODEL_SYNC_GAZE = 0,
-  // Body rotates as head rotates, but at a smaller angle.
+  // Body rotates as head rotates, but at a smaller angle. This behavior
+  // results in better controller position when the head is rotated but the
+  // controller is kept stationary. IMPORTANT: This gaze behavior requires that
+  // the controller api is initialized with GVR_CONTROLLER_ENABLE_GYRO.
   GVR_ARM_MODEL_FOLLOW_GAZE = 1,
-  // Body doesn't rotate as head rotates.
+  // Body doesn't rotate as head rotates. The controller's position is
+  // completely dependent on the controller orientation.
   GVR_ARM_MODEL_IGNORE_GAZE = 2,
+  // Body rotates as head rotates, but at a smaller angle. This behavior
+  // results in better controller position when the head is rotated but the
+  // controller is kept stationary. This behavior also includes full 6DoF
+  // position into the final controller position. IMPORTANT: This gaze behavior
+  // requires that the controller api is initialized with
+  // GVR_CONTROLLER_ENABLE_GYRO.
+  GVR_ARM_MODEL_FOLLOW_GAZE_WITH_6DOF_POSITION = 3,
 } gvr_arm_model_behavior;
 
 typedef struct gvr_user_prefs_ gvr_user_prefs;
@@ -742,7 +765,7 @@ typedef struct AHardwareBuffer AHardwareBuffer;
 namespace gvr {
 
 template <typename WrappedType>
-void NoopDestroy(WrappedType** cobject) {
+void NoopDestroy(WrappedType** /*cobject*/) {
   // Make sure that we don't forget to specify the destroy function.
   // If the wrapped object type doesn't need destruction, add it here.
   static_assert(std::is_same<WrappedType, gvr_frame>::value ||
@@ -854,6 +877,12 @@ const ControllerButton kControllerButtonVolumeUp =
     static_cast<ControllerButton>(GVR_CONTROLLER_BUTTON_VOLUME_UP);
 const ControllerButton kControllerButtonVolumeDown =
     static_cast<ControllerButton>(GVR_CONTROLLER_BUTTON_VOLUME_DOWN);
+const ControllerButton kControllerButtonTrigger =
+    static_cast<ControllerButton>(GVR_CONTROLLER_BUTTON_TRIGGER);
+const ControllerButton kControllerButtonGrip =
+    static_cast<ControllerButton>(GVR_CONTROLLER_BUTTON_GRIP);
+const ControllerButton kControllerButtonReserved2 =
+    static_cast<ControllerButton>(GVR_CONTROLLER_BUTTON_RESERVED2);
 const ControllerButton kControllerButtonCount =
     static_cast<ControllerButton>(GVR_CONTROLLER_BUTTON_COUNT);
 
@@ -959,6 +988,8 @@ const ArmModelBehavior kArmModelBehaviorSyncGaze =
     static_cast<ArmModelBehavior>(GVR_ARM_MODEL_SYNC_GAZE);
 const ArmModelBehavior kArmModelBehaviorIgnoreGaze =
     static_cast<ArmModelBehavior>(GVR_ARM_MODEL_IGNORE_GAZE);
+const ArmModelBehavior kArmModelBehaviorFollowGazeWith6DOFPosition =
+    static_cast<ArmModelBehavior>(GVR_ARM_MODEL_FOLLOW_GAZE_WITH_6DOF_POSITION);
 
 typedef gvr_error Error;
 const Error kErrorNone = static_cast<Error>(GVR_ERROR_NONE);
@@ -971,7 +1002,6 @@ class AudioApi;
 class BufferSpec;
 class ControllerApi;
 class ControllerState;
-class Frame;
 class GvrApi;
 class BufferViewport;
 class BufferViewportList;
@@ -992,7 +1022,7 @@ inline bool operator!=(const gvr_vec2f& lhs, const gvr_vec2f& rhs) {
 }
 
 inline bool operator==(const gvr_vec3f& lhs, const gvr_vec3f& rhs) {
-  return lhs.x == rhs.x && lhs.y == rhs.y;
+  return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
 }
 
 inline bool operator!=(const gvr_vec3f& lhs, const gvr_vec3f& rhs) {

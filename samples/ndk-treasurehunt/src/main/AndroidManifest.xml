@@ -34,13 +34,11 @@
   <application
       android:allowBackup="true"
       android:label="SimLabsVRActivity"
-      android:icon="@drawable/vr_glasses"
-      android:theme="@style/VrActivityTheme">
+      android:icon="@drawable/vr_glasses">
     <activity
         android:name="ru.simlabs.vr.MainActivity"
         android:screenOrientation="landscape"
         android:configChanges="orientation|keyboardHidden|screenSize|uiMode|navigation"
-        android:enableVrMode="@string/gvr_vr_mode_component"
         android:resizeableActivity="false">
 
       <!-- The VR icon to be used in Daydream Home comes in two parts:

@@ -19,28 +19,26 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.os.Bundle
-import android.provider.Contacts
-import android.support.v4.app.FragmentActivity
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
+import androidx.fragment.app.FragmentActivity
 import com.google.vr.ndk.base.AndroidCompat
 import com.google.vr.ndk.base.GvrLayout
-import ru.simlabs.stream.StreamCommander
-import ru.simlabs.stream.StreamDecoder
-import ru.simlabs.stream.utils.StreamPreferencesConstants
-import ru.simlabs.stream.utils.Command
-import javax.microedition.khronos.egl.EGLConfig
-import javax.microedition.khronos.opengles.GL10
+import ru.simlabs.vr.stream.StreamCommander
+import ru.simlabs.vr.stream.StreamDecoder
+import ru.simlabs.vr.stream.utils.Command
+import ru.simlabs.vr.stream.utils.StreamPreferencesConstants
 import java.util.Timer
 import java.util.concurrent.atomic.AtomicLong
+import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.opengles.GL10
 import kotlin.concurrent.schedule
 
 

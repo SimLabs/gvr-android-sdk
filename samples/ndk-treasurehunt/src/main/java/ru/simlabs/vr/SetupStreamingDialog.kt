@@ -7,12 +7,11 @@ import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface
 import android.os.Bundle
-import android.support.v4.app.DialogFragment
 import android.widget.CheckBox
 import android.widget.TextView
+import androidx.fragment.app.DialogFragment
 import kotlinx.android.synthetic.main.dialog_streaming_setup.view.*
-import ru.simlabs.stream.utils.StreamPreferencesConstants
-
+import ru.simlabs.vr.stream.utils.StreamPreferencesConstants
 
 class SetupStreamingDialog: DialogFragment() {
     private lateinit var exitListener: ExitListener
@@ -24,14 +23,7 @@ class SetupStreamingDialog: DialogFragment() {
     @Suppress("DEPRECATION")
     override fun onAttach(activity: Activity) {
         super.onAttach(activity)
-        // Verify that the host activity implements the callback interface
-        try {
-            // Instantiate the NoticeDialogListener so we can send events to the host
-            exitListener = activity as ExitListener
-        } catch (e: ClassCastException) {
-            // The activity doesn't implement the interface, throw exception
-            throw ClassCastException(activity.toString() + " must implement ExitListener")
-        }
+        exitListener = activity as ExitListener
 
     }
 
