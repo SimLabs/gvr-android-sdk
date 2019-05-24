@@ -20,6 +20,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
+import android.opengl.GLES10
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.util.DisplayMetrics
@@ -35,11 +36,9 @@ import ru.simlabs.vr.stream.StreamCommander
 import ru.simlabs.vr.stream.StreamDecoder
 import ru.simlabs.vr.stream.utils.Command
 import ru.simlabs.vr.stream.utils.StreamPreferencesConstants
-import java.util.Timer
 import java.util.concurrent.atomic.AtomicLong
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.concurrent.schedule
 
 
 /**
@@ -72,23 +71,26 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     private val resumeNativeRunnable = Runnable { nativeOnResume(nativeTreasureHuntRenderer.get()) }
 
     private lateinit var streamingSurfaceTexture: SurfaceTexture
-    private val streamCommander = StreamCommander({
-        StreamDecoder(
-                false,
-                Surface(streamingSurfaceTexture),
-                nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer.get()),
-                nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer.get())
-        )
-    }, ::onTextMessage)
 
-    private var lastTextureTimestamp: Long = 0
+    private val streamCommander = StreamCommander(
+            { StreamDecoder(
+                    false,
+                    Surface(streamingSurfaceTexture),
+                    nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer.get()),
+                    nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer.get())
+            ) },
+            ::onTextMessage,
+            { frameID, width, height, userData ->
+                nativeEnqueueFrame(
+                        nativeTreasureHuntRenderer.get(),
+                        frameID,
+                        width, height,
+                        userData
+                )
+            }
+    )
 
     private fun initConnection(address: String) {
-        val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer.get())
-        Log.i("Streaming", "got texture with id $textureID")
-
-        streamingSurfaceTexture = SurfaceTexture(textureID)
-
         Log.i("Streaming", "Connecting to '$address'...")
         streamCommander.connect(address) { success ->
             if (success) {
@@ -161,6 +163,10 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
                     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
                         nativeInitializeGl(nativeTreasureHuntRenderer.get())
 
+                        val textureID = nativeGetStreamingTextureID(nativeTreasureHuntRenderer.get())
+                        Log.i("Streaming", "got texture with id $textureID")
+                        streamingSurfaceTexture = SurfaceTexture(textureID)
+
                         initConnection(nativeGetHostAddress(nativeTreasureHuntRenderer.get()))
                         windowManager.defaultDisplay.getMetrics(displayMetrics)
                     }
@@ -175,15 +181,15 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
 
                     override fun onDrawFrame(gl: GL10) {
                         nativeBeforeTextureUpdate(nativeTreasureHuntRenderer.get())
-                        if (streamCommander.connected) {
+                        val frameID = if (streamCommander.connected) {
                             streamingSurfaceTexture.updateTexImage()
-                            val ts = streamingSurfaceTexture.timestamp / 1000
 
-                            extractActualUserData(ts)
-
+                            streamingSurfaceTexture.timestamp / 1000
+                        } else {
+                            -1
                         }
                         nativeAfterTextureUpdate(nativeTreasureHuntRenderer.get())
-                        nativeDrawFrame(nativeTreasureHuntRenderer.get())
+                        nativeDrawFrame(nativeTreasureHuntRenderer.get(), frameID)
                     }
                 })
 
@@ -277,34 +283,6 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
             nativeOnTextMessage(nativeTreasureHuntRenderer.get(), 0, argsStr)
     }
 
-    private fun extractActualUserData(ts: Long) {
-        assert(ts >= lastTextureTimestamp)
-        if (ts == lastTextureTimestamp)
-            return
-
-        lastTextureTimestamp = ts
-
-        val userData = streamCommander.pendingUserDatas
-        while (true) {
-            val top = userData.peek()
-
-            if (top.timestamp > ts)
-                Log.e("Streaming", "Unexpected user data timestamp: ${top.timestamp} > $ts")
-
-            assert(top.timestamp <= ts)
-
-            if (top.timestamp == ts) {
-                nativeSetUserData(nativeTreasureHuntRenderer.get(), top.data)
-
-                userData.poll()
-
-                break
-            }
-
-            userData.poll()
-        }
-    }
-
     private external fun nativeGetStreamingTextureID(nativeTreasureHuntRenderer: Long): Int
     private external fun nativeGetStreamingTextureWidth(nativeTreasureHuntRenderer: Long): Int
     private external fun nativeGetStreamingTextureHeight(nativeTreasureHuntRenderer: Long): Int
@@ -316,14 +294,14 @@ class MainActivity : FragmentActivity(), SetupStreamingDialog.ExitListener {
     private external fun nativeInitializeGl(nativeTreasureHuntRenderer: Long)
     private external fun nativeBeforeTextureUpdate(nativeTreasureHuntRenderer: Long)
     private external fun nativeAfterTextureUpdate(nativeTreasureHuntRenderer: Long)
-    private external fun nativeDrawFrame(nativeTreasureHuntRenderer: Long): Long
+    private external fun nativeDrawFrame(nativeTreasureHuntRenderer: Long, frameID: Long): Long
     private external fun nativeOnFlyStateChanged(nativeTreasureHuntRenderer: Long, flyForward: Boolean)
     private external fun nativeOnPause(nativeTreasureHuntRenderer: Long)
     private external fun nativeOnResume(nativeTreasureHuntRenderer: Long)
     private external fun nativeGetHostAddress(nativeTreasureHuntRenderer: Long): String
     private external fun nativeOnTextMessage(nativeTreasureHuntRenderer: Long, id: Int, args: String)
     private external fun nativeOnConnected(nativeTreasureHuntRenderer: Long)
-    private external fun nativeSetUserData(nativeTreasureHuntRenderer: Long, userData: ByteArray)
+    private external fun nativeEnqueueFrame(nativeTreasureHuntRenderer: Long, frameID: Int, width: Int, height: Int, userData: ByteArray)
 
     companion object {
         init {

@@ -219,7 +219,7 @@ void TreasureHuntRenderer::ProcessControllerInput() {
   }
 }
 
-void TreasureHuntRenderer::DrawFrame() {
+void TreasureHuntRenderer::DrawFrame(int frame_id) {
   ProcessControllerInput();
 
   PrepareFramebuffer();
@@ -257,6 +257,7 @@ void TreasureHuntRenderer::DrawFrame() {
   args.time_delta = static_cast<float>(
           (time_now.monotonic_system_time_nanos - last_update.monotonic_system_time_nanos) * 1e-9
   );
+  args.frame_id = frame_id;
 
   face_->update(args);
   last_update = time_now;

@@ -8,17 +8,15 @@ import com.koushikdutta.async.http.AsyncHttpClient
 import com.koushikdutta.async.http.WebSocket
 import ru.simlabs.vr.stream.utils.ClientType
 import ru.simlabs.vr.stream.utils.Command
+import ru.simlabs.vr.stream.utils.Frame
 import ru.simlabs.vr.stream.utils.StreamPolicy
 import java.lang.Integer.parseInt
-import java.util.concurrent.ConcurrentLinkedQueue
 
 class StreamCommander constructor(private val decoderFactory: () -> StreamDecoder,
-                                  private val onTextMessage: ((Command, String) -> Unit)? = null) {
+                                  private val onTextMessage: ((Command, String) -> Unit)? = null,
+                                  private val onEnqueueFrame: ((Int, Int, Int, ByteArray) -> Unit)? = null) {
     private lateinit var streamDecoder: StreamDecoder
-    private var streamDecoder2: StreamDecoder? = null
     private lateinit var webSocket: WebSocket
-
-    private var keyFrameRequestTime: Long = 0
 
     var connected = false
         private set
@@ -28,9 +26,6 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
     var pendingFrameUserDataSize: Int? = null
 
     var nextFrameId: Int = 1
-
-    class UserData(val timestamp: Long, val data: ByteArray)
-    val pendingUserDatas = ConcurrentLinkedQueue<UserData>()
 
     fun connect(address: String, onConnectionResult: (Boolean) -> Unit) {
         if (connected) return
@@ -46,10 +41,6 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
             this.webSocket = webSocket
             streamDecoder = decoderFactory()
             streamDecoder.start()
-
-            streamDecoder2 = decoderFactory()
-            streamDecoder2?.resize(null, streamDecoder.width, streamDecoder.height)
-            streamDecoder2?.start()
 
             webSocket.setStringCallback(::onStringCallback)
             webSocket.setDataCallback(::onDataCallback)
@@ -86,7 +77,6 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
 
         streamDecoder.resize(surface, width, height)
 
-        streamDecoder2?.resize(null, width, height)
         send("${Command.SET_CLIENT_RESOLUTION.ordinal} ${streamDecoder.width} ${streamDecoder.height}")
     }
 
@@ -125,8 +115,9 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
             val realUserDataSize = byteBufferList.remaining()
             assert(expectedUserDataSize == realUserDataSize)
 
-            val ud = UserData(nextFrameId.toLong(), byteBufferList.allByteArray)
-            pendingUserDatas.add(ud)
+            val bytes = byteBufferList.allByteArray
+
+            onEnqueueFrame?.invoke(nextFrameId, streamDecoder.width, streamDecoder.height, bytes)
         }
 
         byteBufferList.recycle()
@@ -165,9 +156,6 @@ class StreamCommander constructor(private val decoderFactory: () -> StreamDecode
         if (connected) {
             webSocket.close()
             streamDecoder.close()
-
-            streamDecoder2?.close()
-
             connected = false
         }
     }

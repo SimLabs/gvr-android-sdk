@@ -58,7 +58,7 @@ class TreasureHuntRenderer {
   /**
    * Draw the TreasureHunt scene. This should be called on the rendering thread.
    */
-  void DrawFrame();
+  void DrawFrame(int frame_id = -1);
 
   /**
    * Hide the cube if it's being targeted.

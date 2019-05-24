@@ -74,8 +74,8 @@ JNI_METHOD(void, nativeAfterTextureUpdate)
 }
 
 JNI_METHOD(void, nativeDrawFrame)
-(JNIEnv *env, jobject obj, jlong native_treasure_hunt) {
-  native(native_treasure_hunt)->DrawFrame();
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt, jint frame_id) {
+  native(native_treasure_hunt)->DrawFrame(frame_id);
 }
 
 JNI_METHOD(void, nativeOnFlyStateChanged)
@@ -129,12 +129,25 @@ JNI_METHOD(void, nativeOnConnected)
     native(native_treasure_hunt)->GetWombatInterface()->on_connected();
 }
 
-JNI_METHOD(void, nativeSetUserData)
-(JNIEnv *env, jobject obj, jlong native_treasure_hunt, jbyteArray userData) {
-    jbyte *ptr = env->GetByteArrayElements(userData, nullptr);
+JNI_METHOD(void, nativeEnqueueFrame)
+(JNIEnv *env, jobject obj, jlong native_treasure_hunt, jint frameID, jint width, jint height, jbyteArray userData) {
     jsize const len = env->GetArrayLength(userData);
 
-    native(native_treasure_hunt)->GetWombatInterface()->set_user_data(reinterpret_cast<char const *>(ptr), len);
-    env->ReleaseByteArrayElements(userData, ptr, JNI_ABORT);
+    jbyte *ptr = new jbyte[len]();
+    env->GetByteArrayRegion(userData, 0, len, ptr);
+
+    auto const wombat_interface = native(native_treasure_hunt)->GetWombatInterface();
+
+    const wombat_android_test::frame_data_t frame_data {
+            frameID,
+            wombat_interface->get_streaming_texture_id(),
+            static_cast<uint32_t>(width),
+            static_cast<uint32_t>(height),
+            nullptr,
+            reinterpret_cast<uint8_t const *>(ptr),
+            static_cast<uint32_t>(len)
+    };
+
+    wombat_interface->enqueue_frame(frame_data);
 }
 }  // extern "C"
